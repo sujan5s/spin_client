@@ -4,9 +4,7 @@ export async function POST(request: Request) {
     try {
         const { token: inputToken, referralCode } = await request.json();
 
-        const backendUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
-        // The Express server runs on port 5000
-        const expressUrl = backendUrl.replace(/:\d+$/, ':3001');
+        const expressUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
 
         const beResponse = await fetch(`${expressUrl}/api/auth/google`, {
             method: 'POST',
