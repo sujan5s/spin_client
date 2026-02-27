@@ -13,7 +13,7 @@ export async function GET() {
             );
         }
 
-        const expressUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
+        const expressUrl = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001").replace(/\/$/, '');
 
         const beResponse = await fetch(`${expressUrl}/api/auth/me`, {
             method: 'GET',

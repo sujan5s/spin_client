@@ -4,7 +4,7 @@ export async function POST(request: Request) {
     try {
         const { email, password } = await request.json();
 
-        const expressUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
+        const expressUrl = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001").replace(/\/$/, '');
 
         const beResponse = await fetch(`${expressUrl}/api/auth/login`, {
             method: 'POST',
