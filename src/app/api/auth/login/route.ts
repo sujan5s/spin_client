@@ -36,9 +36,11 @@ export async function POST(request: Request) {
 
         return response;
     } catch (error: any) {
-        console.error("Login error:", error);
+        const expressUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
+        console.error("Login error - target URL:", expressUrl);
+        console.error("Login error - cause:", error?.cause ?? error);
         return NextResponse.json(
-            { error: "Internal server error" },
+            { error: "Internal server error", detail: String(error?.cause ?? error) },
             { status: 500 }
         );
     }
