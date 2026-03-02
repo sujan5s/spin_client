@@ -4,6 +4,14 @@ const API_URL = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001").rep
 
 const nextConfig: NextConfig = {
   transpilePackages: ["framer-motion", "motion"],
+  images: {
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "utfs.io",
+      },
+    ],
+  },
   async rewrites() {
     return [
       {
