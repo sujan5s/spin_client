@@ -67,7 +67,7 @@ export async function POST(request: Request) {
                 const REFEREE_BONUS = 50;
                 user = await tx.user.update({
                     where: { id: userId },
-                    data: { balance: { increment: REFEREE_BONUS } },
+                    data: { bonusBalance: { increment: REFEREE_BONUS } },
                     include: { referredBy: true }
                 });
 
@@ -85,7 +85,7 @@ export async function POST(request: Request) {
                     const REFERRER_BONUS = 100;
                     await tx.user.update({
                         where: { id: user.referredById },
-                        data: { balance: { increment: REFERRER_BONUS } }
+                        data: { bonusBalance: { increment: REFERRER_BONUS } }
                     });
 
                     await tx.transaction.create({
@@ -104,7 +104,7 @@ export async function POST(request: Request) {
             return user;
         });
 
-        return NextResponse.json({ balance: result.balance }, { status: 200 });
+        return NextResponse.json({ balance: result.balance, bonusBalance: result.bonusBalance }, { status: 200 });
     } catch (error) {
         console.error("Deposit error:", error);
         return NextResponse.json(

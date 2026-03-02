@@ -15,6 +15,7 @@ export default function LogoutButton() {
     return (
         <button
             onClick={handleLogout}
+            suppressHydrationWarning
             className="flex w-full items-center gap-3 px-4 py-3 rounded-lg text-red-400 hover:bg-red-500/10 transition-colors"
         >
             <LogOut className="w-5 h-5" />

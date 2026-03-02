@@ -9,7 +9,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
 
 export function Header({ onMenuClick }: { onMenuClick?: () => void }) {
-    const { balance } = useWallet();
+    const { balance, bonusBalance } = useWallet();
     const { user, logout } = useAuth();
     const [isProfileOpen, setIsProfileOpen] = useState(false);
     const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
@@ -96,14 +96,21 @@ export function Header({ onMenuClick }: { onMenuClick?: () => void }) {
                     >
                         <Menu className="h-6 w-6" />
                     </button>
-                    <h2 className="text-lg font-semibold text-foreground">Welcome back, {user?.name || "Gamer"}</h2>
+                    <h2 className="hidden sm:block text-lg font-semibold text-foreground">Welcome back, {user?.name || "Gamer"}</h2>
                 </div>
                 <div className="flex items-center space-x-4">
                     {/* Balance Display */}
-                    <div className="flex items-center rounded-full bg-secondary px-4 py-1.5 border border-border">
-                        <span className="text-sm text-muted-foreground mr-2">Balance:</span>
-                        <TokenIcon className="mr-1" size={16} />
-                        <span className="text-lg font-bold text-primary">{balance.toFixed(2)}</span>
+                    <div className="flex items-center gap-2">
+                        <div className="flex items-center rounded-full bg-secondary px-3 py-1.5 border border-border">
+                            <span className="text-sm text-muted-foreground mr-1 hidden sm:inline">Main</span>
+                            <TokenIcon className="mr-1" size={16} />
+                            <span className="text-sm font-bold text-primary">{balance.toFixed(2)}</span>
+                        </div>
+                        <div className="flex items-center rounded-full bg-yellow-500/10 px-3 py-1.5 border border-yellow-500/20">
+                            <span className="text-sm text-yellow-600 dark:text-yellow-500 mr-1 hidden sm:inline">Bonus</span>
+                            <TokenIcon className="mr-1 text-yellow-500" size={16} />
+                            <span className="text-sm font-bold text-yellow-600 dark:text-yellow-500">{bonusBalance.toFixed(2)}</span>
+                        </div>
                     </div>
 
                     {/* Notifications */}

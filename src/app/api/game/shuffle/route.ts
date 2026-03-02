@@ -26,6 +26,14 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: "Minimum bet is 10" }, { status: 400 });
         }
 
+        const sysSettings = await prisma.systemSettings.findFirst();
+        const bonusPct = sysSettings?.bonusDeductionPct ?? 20;
+        const gamesEnabled = sysSettings ? JSON.parse(sysSettings.gamesEnabled) : {};
+
+        if (gamesEnabled.shuffle === false) {
+            return NextResponse.json({ error: "Game is currently disabled" }, { status: 400 });
+        }
+
         // Logic:
         // 1. Deduct balance
         // 2. Generate Winning Cup (0, 1, 2)
@@ -90,12 +98,19 @@ export async function POST(request: Request) {
         const transactionResult = await prisma.$transaction(async (tx) => {
             const user = await tx.user.findUnique({ where: { id: userId } });
             if (!user) throw new Error("User not found");
-            if (user.balance < betAmount) throw new Error("Insufficient funds");
+
+            const deductBonus = Math.min(user.bonusBalance, betAmount * (bonusPct / 100));
+            const deductMain = betAmount - deductBonus;
+
+            if (user.balance < deductMain) throw new Error("Insufficient funds");
 
             // Deduct bet
-            await tx.user.update({
+            const updatedUser = await tx.user.update({
                 where: { id: userId },
-                data: { balance: { decrement: betAmount } }
+                data: {
+                    balance: { decrement: deductMain },
+                    bonusBalance: { decrement: deductBonus }
+                }
             });
 
             // Create Game
@@ -109,13 +124,14 @@ export async function POST(request: Request) {
                 }
             });
 
-            return { game, balance: user.balance - betAmount };
+            return { game, balance: updatedUser.balance, bonusBalance: updatedUser.bonusBalance };
         });
 
         return NextResponse.json({
             gameId: transactionResult.game.id,
             winningCup,
-            balance: transactionResult.balance
+            balance: transactionResult.balance,
+            bonusBalance: transactionResult.bonusBalance
         });
 
     } catch (error: any) {

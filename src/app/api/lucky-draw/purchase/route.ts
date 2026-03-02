@@ -49,12 +49,28 @@ export async function POST(request: Request) {
             });
 
             if (!user) throw new Error("User not found");
-            if (user.balance < price) throw new Error("Insufficient balance");
+
+            // Calculate split
+            const maxBonusDeduction = price * 0.2;
+            let bonusDeduction = 0;
+            let mainDeduction = price;
+
+            if (user.bonusBalance > 0) {
+                bonusDeduction = Math.min(user.bonusBalance, maxBonusDeduction);
+                mainDeduction = price - bonusDeduction;
+            }
+
+            if (user.balance < mainDeduction) {
+                throw new Error("Insufficient main balance");
+            }
 
             // Deduct balance
-            await tx.user.update({
+            const updatedUser = await tx.user.update({
                 where: { id: userId },
-                data: { balance: { decrement: price } }
+                data: {
+                    balance: { decrement: mainDeduction },
+                    bonusBalance: { decrement: bonusDeduction },
+                }
             });
 
             // Create Transaction Record
@@ -85,20 +101,32 @@ export async function POST(request: Request) {
                 }
             });
 
-            return ticket;
+            return { ticket, balance: updatedUser.balance, bonusBalance: updatedUser.bonusBalance };
         });
 
         return NextResponse.json({
             success: true,
-            ticket: result,
+            ticket: result.ticket,
+            balance: result.balance,
+            bonusBalance: result.bonusBalance,
             message: "Ticket purchased successfully"
         });
 
     } catch (error: any) {
         console.error("Purchase error:", error);
+
+        let errorMessage = "Internal server error";
+        let statusCode = 400; // Default to 400 for business logic
+
+        if (error.message === "Insufficient main balance" || error.message === "Insufficient balance") {
+            errorMessage = "Insufficient balance";
+        } else if (error.message) {
+            errorMessage = error.message;
+        }
+
         return NextResponse.json(
-            { error: error.message || "Internal server error" },
-            { status: 400 } // Using 400 for business logic errors like "Insufficient balance"
+            { error: errorMessage },
+            { status: statusCode }
         );
     }
 }

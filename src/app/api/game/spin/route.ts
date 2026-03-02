@@ -32,6 +32,14 @@ export async function POST(request: Request) {
             );
         }
 
+        const sysSettings = await prisma.systemSettings.findFirst();
+        const bonusPct = sysSettings?.bonusDeductionPct ?? 20;
+        const gamesEnabled = sysSettings ? JSON.parse(sysSettings.gamesEnabled) : {};
+
+        if (gamesEnabled.spin === false) {
+            return NextResponse.json({ error: "Game is currently disabled" }, { status: 400 });
+        }
+
         // Transaction to ensure atomicity
         const result = await prisma.$transaction(async (tx) => {
             const user = await tx.user.findUnique({
@@ -56,8 +64,18 @@ export async function POST(request: Request) {
                 throw new Error("Daily spin limit reached");
             }
 
-            if (user.balance < betAmount) {
-                throw new Error("Insufficient balance");
+            // Calculate split
+            const maxBonusDeduction = betAmount * (bonusPct / 100);
+            let bonusDeduction = 0;
+            let mainDeduction = betAmount;
+
+            if (user.bonusBalance > 0) {
+                bonusDeduction = Math.min(user.bonusBalance, maxBonusDeduction);
+                mainDeduction = betAmount - bonusDeduction;
+            }
+
+            if (user.balance < mainDeduction) {
+                throw new Error("Insufficient main balance");
             }
 
             // 2. Determine outcome using Weighted Random Logic from Database
@@ -100,14 +118,15 @@ export async function POST(request: Request) {
             const profit = winAmount - betAmount; // Net change
 
             // 3. Update balance
-            // Deduct bet, add winnings (or just add profit)
-            // balance = balance - bet + win
-            const newBalance = user.balance - betAmount + winAmount;
+            // Deduct bet, add winnings
+            const newBalance = user.balance - mainDeduction + winAmount;
+            const newBonusBalance = user.bonusBalance - bonusDeduction;
 
             const updatedUser = await tx.user.update({
                 where: { id: userId },
                 data: {
                     balance: newBalance,
+                    bonusBalance: newBonusBalance,
                     dailySpinCount: currentCount + 1, // Increment count (reset handled by logic above, but here we just set based on calculated current)
                     lastSpinDate: now
                 },
@@ -165,6 +184,7 @@ export async function POST(request: Request) {
 
             return {
                 balance: updatedUser.balance,
+                bonusBalance: updatedUser.bonusBalance,
                 segmentIndex,
                 multiplier,
                 winAmount,
@@ -176,7 +196,7 @@ export async function POST(request: Request) {
 
     } catch (error: any) {
         console.error("Spin error:", error);
-        if (error.message === "Insufficient balance") {
+        if (error.message === "Insufficient main balance" || error.message === "Insufficient balance") {
             return NextResponse.json(
                 { error: "Insufficient balance" },
                 { status: 400 }

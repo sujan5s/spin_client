@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useWallet } from "@/context/WalletContext";
+import { useSystemSettings } from "@/context/SystemSettingsContext";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
 import { Loader2, Flame, Ghost, Crown, Egg, Skull, Shield } from "lucide-react";
@@ -17,7 +18,8 @@ type GameConfig = {
 };
 
 export default function DragonTowerGame() {
-    const { balance, updateBalance, setBalance, refreshTransactions } = useWallet();
+    const { balance, updateBalance, setBalance, setBonusBalance, refreshTransactions } = useWallet();
+    const { gamesEnabled } = useSystemSettings();
     const [betAmount, setBetAmount] = useState<string>("10");
     const [difficulty, setDifficulty] = useState<Difficulty>("medium");
     const [gameState, setGameState] = useState<"idle" | "playing" | "game_over" | "won">("idle");
@@ -77,6 +79,9 @@ export default function DragonTowerGame() {
 
             setGameId(data.gameId);
             setConfig(data.config);
+            if (data.balance !== undefined) setBalance(data.balance);
+            if (data.bonusBalance !== undefined) setBonusBalance(data.bonusBalance);
+
             setGameState("playing");
             setCurrentRow(0);
             setHistory(Array(data.config.rows).fill(null)); // Reset Grid
@@ -191,6 +196,11 @@ export default function DragonTowerGame() {
             <div className="w-full max-w-6xl flex flex-col md:flex-row gap-4 md:gap-8 h-full">
                 {/* Sidebar Controls */}
                 <div className="w-full md:w-80 bg-zinc-900 p-6 rounded-xl border border-zinc-800 h-fit space-y-6 shrink-0">
+                    {gamesEnabled.dragontower === false && gameState !== 'playing' && (
+                        <div className="text-red-500 text-sm font-bold bg-red-500/10 border border-red-500/20 p-3 rounded-lg text-center animate-pulse">
+                            Game is currently disabled by Admin.
+                        </div>
+                    )}
                     <div>
                         <label className="text-sm text-zinc-400 font-medium mb-2 block">Bet Amount</label>
                         <input
@@ -241,8 +251,8 @@ export default function DragonTowerGame() {
                     ) : (
                         <button
                             onClick={handleStart}
-                            disabled={loading}
-                            className="w-full py-4 bg-purple-600 hover:bg-purple-500 text-white font-bold rounded-lg shadow-[0_4px_0_rgb(147,51,234)] active:shadow-none active:translate-y-[4px] transition-all disabled:opacity-50"
+                            disabled={loading || gamesEnabled.dragontower === false}
+                            className="w-full py-4 bg-purple-600 hover:bg-purple-500 text-white font-bold rounded-lg shadow-[0_4px_0_rgb(147,51,234)] active:shadow-none active:translate-y-[4px] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                             {loading ? "Starting..." : "START GAME"}
                         </button>

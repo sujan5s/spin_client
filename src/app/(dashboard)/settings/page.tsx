@@ -205,7 +205,7 @@ export default function SettingsPage() {
                 <h3 className="text-xl font-bold mb-6 flex items-center gap-2 text-red-500">
                     <Trash2 className="h-5 w-5" /> Danger Zone
                 </h3>
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 justify-between">
                     <div>
                         <div className="font-medium text-red-500">Delete Account</div>
                         <div className="text-sm text-red-500/70">Permanently delete your account and all data</div>
@@ -213,7 +213,7 @@ export default function SettingsPage() {
                     <button
                         onClick={handleDeleteAccount}
                         disabled={isDeleteLoading}
-                        className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
+                        className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg text-sm font-medium transition-colors flex items-center gap-2 shrink-0"
                     >
                         {isDeleteLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Delete Account"}
                     </button>

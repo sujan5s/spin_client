@@ -25,6 +25,14 @@ export async function POST(request: Request) {
         if (!betAmount || betAmount < 10) return NextResponse.json({ error: "Minimum bet amount is 10" }, { status: 400 });
         if (!minesCount || minesCount < 1 || minesCount > 24) return NextResponse.json({ error: "Invalid mines count (1-24)" }, { status: 400 });
 
+        const sysSettings = await prisma.systemSettings.findFirst();
+        const bonusPct = sysSettings?.bonusDeductionPct ?? 20;
+        const gamesEnabled = sysSettings ? JSON.parse(sysSettings.gamesEnabled) : {};
+
+        if (gamesEnabled.mines === false) {
+            return NextResponse.json({ error: "Game is currently disabled" }, { status: 400 });
+        }
+
         // Helper to generate unique mines
         const generateMines = (count: number) => {
             const positions = Array.from({ length: 25 }, (_, i) => i);
@@ -38,12 +46,19 @@ export async function POST(request: Request) {
         const result = await prisma.$transaction(async (tx) => {
             const user = await tx.user.findUnique({ where: { id: userId } });
             if (!user) throw new Error("User not found");
-            if (user.balance < betAmount) throw new Error("Insufficient funds");
+
+            const deductBonus = Math.min(user.bonusBalance, betAmount * (bonusPct / 100));
+            const deductMain = betAmount - deductBonus;
+
+            if (user.balance < deductMain) throw new Error("Insufficient funds");
 
             // Deduct balance
-            await tx.user.update({
+            const updatedUser = await tx.user.update({
                 where: { id: userId },
-                data: { balance: { decrement: betAmount } }
+                data: {
+                    balance: { decrement: deductMain },
+                    bonusBalance: { decrement: deductBonus }
+                }
             });
 
             // Create Transaction Record
@@ -70,7 +85,7 @@ export async function POST(request: Request) {
                 }
             });
 
-            return { game, balance: user.balance - betAmount };
+            return { game, balance: updatedUser.balance, bonusBalance: updatedUser.bonusBalance };
         });
 
         // Hide mines in response
@@ -78,7 +93,8 @@ export async function POST(request: Request) {
 
         return NextResponse.json({
             game: safeGame,
-            balance: result.balance
+            balance: result.balance,
+            bonusBalance: result.bonusBalance
         });
 
     } catch (error: any) {

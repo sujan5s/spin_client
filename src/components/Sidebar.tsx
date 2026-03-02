@@ -2,22 +2,31 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Wallet, Gamepad2, Settings, LogOut, CreditCard, Ticket, X, Dices, Bomb, Eye, Crown, Users } from "lucide-react";
+import { LayoutDashboard, Wallet, Gamepad2, Settings, LogOut, CreditCard, Ticket, X, Dices, Bomb, Eye, Crown, Users, Home } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/context/AuthContext";
+import { useSystemSettings } from "@/context/SystemSettingsContext";
 
-const navigation = [
+interface NavigationItem {
+    name: string;
+    href: string;
+    icon: any;
+    gameKey?: string;
+}
+
+const defaultNavigation: NavigationItem[] = [
+    { name: "Home", href: "/home", icon: Home },
     { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
     { name: "Wallet", href: "/wallet", icon: Wallet },
     { name: "Withdraw", href: "/withdraw", icon: CreditCard },
-    { name: "Lucky Draw", href: "/lucky-draw", icon: Ticket },
-    { name: "Spin & Win", href: "/spin", icon: Gamepad2 },
-    { name: "Roulette", href: "/roulette", icon: Dices },
-    { name: "Mines", href: "/mines", icon: Bomb },
-    { name: "Plinko", href: "/plinko", icon: LayoutDashboard }, // Reuse icon or find better (Grip has dots?)
-    { name: "Dragon Tower", href: "/dragontower", icon: Crown },
-    { name: "3 Cup Shuffle", href: "/shuffle", icon: Eye },
-    { name: "Slots", href: "/slots", icon: Gamepad2 },
+    { name: "Lucky Draw", href: "/lucky-draw", icon: Ticket, gameKey: "luckydraw" },
+    { name: "Spin & Win", href: "/spin", icon: Gamepad2, gameKey: "spin" },
+    { name: "Roulette", href: "/roulette", icon: Dices, gameKey: "roulette" },
+    { name: "Mines", href: "/mines", icon: Bomb, gameKey: "mines" },
+    { name: "Plinko", href: "/plinko", icon: LayoutDashboard, gameKey: "plinko" },
+    { name: "Dragon Tower", href: "/dragontower", icon: Crown, gameKey: "dragontower" },
+    { name: "3 Cup Shuffle", href: "/shuffle", icon: Eye, gameKey: "shuffle" },
+    { name: "Slots", href: "/slots", icon: Gamepad2, gameKey: "slots" },
     { name: "Referral", href: "/referral", icon: Users },
 ];
 
@@ -28,6 +37,12 @@ interface SidebarProps {
 export function Sidebar({ onClose }: SidebarProps) {
     const pathname = usePathname();
     const { logout } = useAuth();
+    const { gamesEnabled } = useSystemSettings();
+
+    const visibleNavigation = defaultNavigation.filter(item => {
+        if (!item.gameKey) return true; // Always show non-game items
+        return gamesEnabled[item.gameKey] !== false; // Hide only if explicitly false
+    });
 
     return (
         <div className="flex h-full w-full md:w-64 flex-col bg-card border-r border-border">
@@ -42,7 +57,7 @@ export function Sidebar({ onClose }: SidebarProps) {
                 )}
             </div>
             <nav className="flex-1 space-y-1 px-2 py-4 overflow-y-auto">
-                {navigation.map((item) => {
+                {visibleNavigation.map((item) => {
                     const isActive = pathname === item.href;
                     return (
                         <Link

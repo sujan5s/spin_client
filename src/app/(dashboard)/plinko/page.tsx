@@ -6,9 +6,11 @@ import { Coins, Loader2, History } from "lucide-react";
 import PlinkoCanvas from "@/components/plinko/PlinkoCanvas";
 import WinLossPopup from "@/components/plinko/WinLossPopup";
 import { cn } from "@/lib/utils";
+import { useSystemSettings } from "@/context/SystemSettingsContext";
 
 export default function PlinkoPage() {
-    const { balance, updateBalance, refreshTransactions } = useWallet();
+    const { balance, setBalance, setBonusBalance, refreshTransactions } = useWallet();
+    const { gamesEnabled } = useSystemSettings();
     const [betAmount, setBetAmount] = useState<string>("10");
     const [risk, setRisk] = useState<'low' | 'medium' | 'high'>('medium');
     const [rows, setRows] = useState<number>(16);
@@ -48,7 +50,8 @@ export default function PlinkoPage() {
             setActiveBalls(prev => [...prev, newBall]);
 
             // Deduction happens immediately for better UX
-            updateBalance(-bet);
+            if (data.balance !== undefined) setBalance(data.balance);
+            if (data.bonusBalance !== undefined) setBonusBalance(data.bonusBalance);
             refreshTransactions();
 
         } catch (error) {
@@ -63,7 +66,6 @@ export default function PlinkoPage() {
 
         // Update balance with Winnings (since bet was already deducted)
         if (win > 0) {
-            updateBalance(win);
             refreshTransactions();
         }
 
@@ -109,7 +111,11 @@ export default function PlinkoPage() {
             <div className="flex flex-col-reverse lg:flex-row gap-4 w-full max-w-6xl h-full min-h-0">
                 {/* Controls */}
                 <div className="w-full lg:w-1/4 space-y-4 bg-zinc-900/50 p-4 rounded-xl border border-zinc-800 h-fit overflow-y-auto max-h-full">
-
+                    {gamesEnabled.plinko === false && activeBalls.length === 0 && (
+                        <div className="text-red-500 text-sm font-bold bg-red-500/10 border border-red-500/20 p-3 rounded-lg text-center animate-pulse">
+                            Game is currently disabled by Admin.
+                        </div>
+                    )}
                     {/* Bet Amount */}
                     <div className="space-y-2">
                         <label className="text-sm font-bold text-zinc-400">Bet Amount</label>
@@ -172,7 +178,8 @@ export default function PlinkoPage() {
                     {/* Play Button */}
                     <button
                         onClick={handleDrop}
-                        className="w-full py-4 bg-green-500 hover:bg-green-400 text-black font-black text-xl rounded-xl shadow-[0_4px_0_rgb(21,128,61)] active:shadow-none active:translate-y-[4px] transition-all uppercase tracking-wider"
+                        disabled={gamesEnabled.plinko === false}
+                        className="w-full py-4 bg-green-500 hover:bg-green-400 text-black font-black text-xl rounded-xl shadow-[0_4px_0_rgb(21,128,61)] active:shadow-none active:translate-y-[4px] transition-all uppercase tracking-wider disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                         BET
                     </button>

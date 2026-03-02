@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useWallet } from "@/context/WalletContext";
+import { useSystemSettings } from "@/context/SystemSettingsContext";
 import { cn } from "@/lib/utils";
 import { getSymbolComponent } from "./SlotsSymbols";
 import { Trophy, Info, Loader2, Coins } from "lucide-react";
@@ -19,7 +20,8 @@ const useSound = () => {
 };
 
 export default function SlotsGame() {
-    const { balance, updateBalance, setBalance, refreshTransactions } = useWallet();
+    const { balance, setBalance, setBonusBalance, updateBalance, refreshTransactions } = useWallet();
+    const { gamesEnabled } = useSystemSettings();
     const [betAmount, setBetAmount] = useState<string>("10");
     const [isSpinning, setIsSpinning] = useState(false);
     const [reels, setReels] = useState<string[]>(Array(REEL_COUNT).fill('7'));
@@ -60,9 +62,9 @@ export default function SlotsGame() {
                 setIsSpinning(false);
 
                 // Sync balance from server (guarateed correctness)
-                if (data.balance !== undefined) {
-                    setBalance(data.balance);
-                }
+                if (data.balance !== undefined) setBalance(data.balance);
+                if (data.bonusBalance !== undefined) setBonusBalance(data.bonusBalance);
+
                 refreshTransactions();
 
                 // Win logic after stop
@@ -118,6 +120,11 @@ export default function SlotsGame() {
 
                 {/* --- LEFT SIDEBAR (Controls) --- */}
                 <div className="w-full md:w-80 bg-zinc-900 rounded-xl p-6 border border-zinc-800 h-fit flex flex-col gap-6 shrink-0 shadow-xl">
+                    {gamesEnabled.slots === false && !isSpinning && (
+                        <div className="text-red-500 text-sm font-bold bg-red-500/10 border border-red-500/20 p-3 rounded-lg text-center animate-pulse">
+                            Game is currently disabled by Admin.
+                        </div>
+                    )}
                     <div>
                         <label className="text-sm text-zinc-400 font-medium mb-2 block">Bet Amount</label>
                         <div className="relative">
@@ -147,7 +154,7 @@ export default function SlotsGame() {
                     <div className="mt-auto">
                         <button
                             onClick={handleSpin}
-                            disabled={isSpinning || !betAmount || parseFloat(betAmount) <= 0}
+                            disabled={isSpinning || !betAmount || parseFloat(betAmount) <= 0 || gamesEnabled.slots === false}
                             className="w-full py-4 bg-gradient-to-b from-yellow-400 to-yellow-600 hover:from-yellow-300 hover:to-yellow-500 disabled:opacity-50 disabled:cursor-not-allowed text-black font-black text-xl rounded-xl shadow-[0_4px_0_rgb(161,98,7)] active:shadow-none active:translate-y-[4px] transition-all uppercase tracking-wider relative overflow-hidden"
                         >
                             {isSpinning ? <Loader2 className="w-6 h-6 animate-spin mx-auto" /> : "SPIN"}

@@ -7,7 +7,7 @@ import { TokenIcon } from "@/components/TokenIcon";
 import { cn } from "@/lib/utils";
 
 export default function DashboardPage() {
-    const { balance, transactions } = useWallet();
+    const { balance, bonusBalance, transactions } = useWallet();
     const { user } = useAuth();
 
     const totalWins = transactions
@@ -32,7 +32,8 @@ export default function DashboardPage() {
                         <h3 className="text-sm font-medium text-muted-foreground">Total Balance</h3>
                         <TokenIcon className="h-5 w-5" />
                     </div>
-                    <div className="text-3xl font-bold text-foreground flex items-center gap-1"><TokenIcon size={24} />{balance.toFixed(2)}</div>
+                    <div className="text-3xl font-bold text-foreground flex items-center gap-1"><TokenIcon size={24} />{(balance + bonusBalance).toFixed(2)}</div>
+                    <div className="text-sm text-muted-foreground mt-2">Main: {balance.toFixed(2)} | Bonus: {bonusBalance.toFixed(2)}</div>
                 </div>
                 <div className="p-6 bg-card border border-border rounded-xl shadow-sm">
                     <div className="flex items-center justify-between mb-4">

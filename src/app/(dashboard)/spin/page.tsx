@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { useWallet } from "@/context/WalletContext";
+import { useSystemSettings } from "@/context/SystemSettingsContext";
 import { AlertCircle, Trophy, History, Coins, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -16,7 +17,8 @@ interface SpinSegment {
 }
 
 export default function SpinPage() {
-    const { balance, updateBalance, refreshTransactions } = useWallet();
+    const { balance, setBalance, setBonusBalance, refreshTransactions } = useWallet();
+    const { gamesEnabled } = useSystemSettings();
     const [betAmount, setBetAmount] = useState<string>("");
     const [isSpinning, setIsSpinning] = useState(false);
     const [rotation, setRotation] = useState(0);
@@ -154,8 +156,10 @@ export default function SpinPage() {
                 // Update history
                 setHistory(prev => [{ multiplier, win: winAmount > 0 }, ...prev].slice(0, 5));
 
-                const netChange = winAmount - bet;
-                updateBalance(netChange);
+                setBalance(data.balance);
+                if (data.bonusBalance !== undefined) {
+                    setBonusBalance(data.bonusBalance);
+                }
                 refreshTransactions(); // Update transaction history
 
                 // Trigger Global Notification
@@ -212,14 +216,14 @@ export default function SpinPage() {
                 <p className="text-yellow-200/80 font-medium tracking-widest uppercase text-sm">Win Big or Go Home</p>
             </div>
 
-            <div className="flex flex-col lg:flex-row gap-16 items-center justify-center w-full max-w-6xl">
+            <div className="flex flex-col items-center justify-center p-2 gap-8">
                 {/* Wheel Section */}
                 <div className="relative group">
                     {/* Outer Glow */}
                     <div className="absolute inset-0 bg-yellow-500/20 blur-[100px] rounded-full pointer-events-none" />
 
                     {/* Wheel Border with Lights */}
-                    <div className="relative w-[340px] h-[340px] md:w-[450px] md:h-[450px] rounded-full bg-gradient-to-b from-red-900 to-red-950 p-4 shadow-[0_0_50px_rgba(0,0,0,0.5)] border-4 border-yellow-600/50">
+                    <div className="relative w-[280px] h-[280px] sm:w-[360px] sm:h-[360px] md:w-[420px] md:h-[420px] rounded-full bg-gradient-to-b from-red-900 to-red-950 p-4 shadow-[0_0_50px_rgba(0,0,0,0.5)] border-4 border-yellow-600/50">
                         {/* Lights */}
                         {Array.from({ length: 20 }).map((_, i) => (
                             <div
@@ -297,7 +301,7 @@ export default function SpinPage() {
                 </div>
 
                 {/* Controls Section */}
-                <div className="w-full max-w-md space-y-6">
+                <div className="w-full max-w-sm sm:max-w-md space-y-6">
                     {/* Balance Card */}
                     <div className="bg-zinc-900/80 backdrop-blur-md border border-zinc-800 p-6 rounded-2xl shadow-xl">
                         <div className="flex justify-between items-center mb-6">
@@ -309,6 +313,12 @@ export default function SpinPage() {
                                 {balance.toFixed(2)}
                             </span>
                         </div>
+
+                        {gamesEnabled.spin === false && !isSpinning && (
+                            <div className="text-red-500 text-sm font-bold bg-red-500/10 border border-red-500/20 p-3 rounded-lg text-center animate-pulse mb-4">
+                                Game is currently disabled by Admin.
+                            </div>
+                        )}
 
                         <div className="space-y-4">
                             {/* Daily Limit Info */}
@@ -374,7 +384,7 @@ export default function SpinPage() {
 
                             <button
                                 onClick={handleSpin}
-                                disabled={isSpinning || !betAmount || parseFloat(betAmount) < 10 || parseFloat(betAmount) > balance || spinsLeft <= 0}
+                                disabled={isSpinning || !betAmount || parseFloat(betAmount) < 10 || parseFloat(betAmount) > balance || spinsLeft <= 0 || gamesEnabled.spin === false}
                                 className="w-full py-4 bg-gradient-to-b from-yellow-400 to-yellow-600 hover:from-yellow-300 hover:to-yellow-500 disabled:opacity-50 disabled:cursor-not-allowed text-black font-black text-xl rounded-xl shadow-[0_4px_0_rgb(161,98,7)] active:shadow-none active:translate-y-[4px] transition-all uppercase tracking-wider"
                             >
                                 {isSpinning ? "Spinning..." : "SPIN NOW"}

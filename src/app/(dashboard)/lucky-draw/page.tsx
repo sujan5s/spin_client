@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { TokenIcon } from "@/components/TokenIcon";
 import { useWallet } from "@/context/WalletContext";
 import { useAuth } from "@/context/AuthContext";
+import { useSystemSettings } from "@/context/SystemSettingsContext";
 
 interface TicketData {
     id: number;
@@ -19,8 +20,8 @@ interface TicketData {
 const TICKET_PRICES = [10, 50, 200, 500];
 
 export default function LuckyDrawPage() {
-    const { balance } = useWallet();
-    const { refreshUser } = useAuth();
+    const { balance, setBalance, setBonusBalance } = useWallet();
+    const { gamesEnabled } = useSystemSettings();
     const [tickets, setTickets] = useState<TicketData[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [purchaseLoading, setPurchaseLoading] = useState<number | null>(null); // price of ticket being bought
@@ -65,7 +66,10 @@ export default function LuckyDrawPage() {
             const data = await res.json();
 
             if (res.ok) {
-                await refreshUser(); // Update balance in AuthContext
+                // Update specific local balances context instantly
+                setBalance(data.balance);
+                if (data.bonusBalance !== undefined) setBonusBalance(data.bonusBalance);
+
                 await fetchTickets();
 
                 // Show Popup
@@ -106,8 +110,14 @@ export default function LuckyDrawPage() {
                 </div>
             )}
 
+            {gamesEnabled.luckydraw === false && (
+                <div className="text-red-500 text-sm font-bold bg-red-500/10 border border-red-500/20 p-3 rounded-lg text-center animate-pulse">
+                    Game is currently disabled by Admin.
+                </div>
+            )}
+
             {/* Purchase Options */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
                 {TICKET_PRICES.map((price) => (
                     <div key={price} className="bg-card border border-border rounded-xl p-6 flex flex-col items-center text-center hover:border-primary/50 transition-colors shadow-lg shadow-black/5 hover:shadow-primary/5 group">
                         <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
@@ -118,8 +128,8 @@ export default function LuckyDrawPage() {
 
                         <button
                             onClick={() => handlePurchase(price)}
-                            disabled={purchaseLoading !== null}
-                            className="mt-auto w-full bg-primary hover:bg-primary/90 text-primary-foreground py-2 rounded-lg font-bold transition-all active:scale-95 flex items-center justify-center gap-2"
+                            disabled={purchaseLoading !== null || gamesEnabled.luckydraw === false}
+                            className="mt-auto w-full bg-primary hover:bg-primary/90 text-primary-foreground py-2 rounded-lg font-bold transition-all active:scale-95 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                             {purchaseLoading === price ? <Loader2 className="h-4 w-4 animate-spin" /> : "Buy Ticket"}
                         </button>
@@ -165,8 +175,8 @@ export default function LuckyDrawPage() {
             {pastTickets.length > 0 && (
                 <div className="space-y-4 pt-8 border-t border-border">
                     <h2 className="text-xl font-bold">History</h2>
-                    <div className="bg-card border border-border rounded-xl overflow-hidden">
-                        <table className="w-full text-sm text-left">
+                    <div className="bg-card border border-border rounded-xl overflow-x-auto">
+                        <table className="w-full text-sm text-left min-w-[500px]">
                             <thead className="bg-secondary text-muted-foreground">
                                 <tr>
                                     <th className="px-6 py-3 font-medium">Date</th>

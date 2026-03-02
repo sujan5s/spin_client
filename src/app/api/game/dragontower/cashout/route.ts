@@ -50,13 +50,14 @@ export async function POST(request: Request) {
                 }
             });
 
-            return u.balance;
+            return { balance: u.balance, bonusBalance: u.bonusBalance };
         });
 
         return NextResponse.json({
             status: "cashed_out",
             winAmount,
-            balance: transactionResult
+            balance: transactionResult.balance,
+            bonusBalance: transactionResult.bonusBalance
         });
 
     } catch (error: any) {

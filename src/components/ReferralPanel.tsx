@@ -76,16 +76,16 @@ export default function ReferralPanel() {
                     {/* Share Link */}
                     <div>
                         <label className="block text-gray-400 text-sm mb-2">Your Referral Link</label>
-                        <div className="flex gap-2">
+                        <div className="flex flex-col sm:flex-row gap-2">
                             <input
                                 type="text"
                                 readOnly
                                 value={referralData?.referralLink || ""}
-                                className="flex-1 bg-black/50 border border-gray-800 rounded-lg px-4 py-2 text-gray-300 focus:outline-none"
+                                className="flex-1 bg-black/50 border border-gray-800 rounded-lg px-4 py-2 text-gray-300 focus:outline-none text-sm truncate"
                             />
                             <button
                                 onClick={copyToClipboard}
-                                className="bg-[#00ff41] hover:bg-[#00cc33] text-black font-bold px-4 py-2 rounded-lg transition-colors flex items-center gap-2"
+                                className="bg-[#00ff41] hover:bg-[#00cc33] text-black font-bold px-4 py-2 rounded-lg transition-colors flex items-center justify-center gap-2 shrink-0"
                             >
                                 <Copy size={18} /> Copy
                             </button>

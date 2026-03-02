@@ -58,13 +58,14 @@ export async function POST(request: Request) {
             });
 
             // Reveal Mines (Optional: Stake reveals mines after cashout to prove fairness)
-            return { updatedGame, balance: user.balance, mines: game.mines };
+            return { updatedGame, balance: user.balance, bonusBalance: user.bonusBalance, mines: game.mines };
         });
 
         return NextResponse.json({
             status: "cashed_out",
             payout: result.updatedGame.betAmount * result.updatedGame.multiplier,
             balance: result.balance,
+            bonusBalance: result.bonusBalance,
             mines: JSON.parse(result.mines) // Show mines to prove user was safe or not
         });
 

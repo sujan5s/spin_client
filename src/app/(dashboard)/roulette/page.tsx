@@ -2,13 +2,15 @@
 
 import { useState, useRef, useEffect } from "react";
 import { useWallet } from "@/context/WalletContext";
+import { useSystemSettings } from "@/context/SystemSettingsContext";
 import { Loader2, RotateCcw, Coins, Trophy } from "lucide-react";
 import { cn } from "@/lib/utils";
 import RouletteWheel from "@/components/roulette/RouletteWheel";
 import BettingTable from "@/components/roulette/BettingTable";
 
 export default function RoulettePage() {
-    const { balance, updateBalance, refreshTransactions } = useWallet();
+    const { balance, setBalance, setBonusBalance, refreshTransactions } = useWallet();
+    const { gamesEnabled } = useSystemSettings();
     const [gameState, setGameState] = useState<"IDLE" | "SPINNING" | "RESULT">("IDLE");
     const [bets, setBets] = useState<{ [key: string]: number }>({});
     const [selectedChip, setSelectedChip] = useState<number>(1);
@@ -106,7 +108,8 @@ export default function RoulettePage() {
             setHistory(prev => [data.result, ...prev].slice(0, 10)); // Keep last 10
 
             // Update Wallet
-            updateBalance(data.netChange);
+            if (data.balance !== undefined) setBalance(data.balance);
+            if (data.bonusBalance !== undefined) setBonusBalance(data.bonusBalance);
             refreshTransactions();
 
             // Trigger Notification (Delayed)
@@ -138,20 +141,20 @@ export default function RoulettePage() {
     return (
         <div className="min-h-screen bg-[#0f1012] text-white p-4 md:p-8 flex flex-col items-center">
             {/* Header */}
-            <div className="w-full max-w-7xl flex justify-between items-center mb-8">
+            <div className="w-full max-w-7xl flex justify-between items-center mb-6 gap-4">
                 <div>
-                    <h1 className="text-3xl md:text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 via-yellow-200 to-yellow-500 uppercase tracking-tight">
+                    <h1 className="text-2xl md:text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 via-yellow-200 to-yellow-500 uppercase tracking-tight">
                         Royal Roulette
                     </h1>
-                    <p className="text-zinc-500 font-medium">European Single Zero</p>
+                    <p className="text-zinc-500 font-medium hidden sm:block">European Single Zero</p>
                 </div>
-                <div className="bg-zinc-900 border border-zinc-800 rounded-xl px-6 py-3 flex items-center gap-4">
-                    <Coins className="text-yellow-500 w-6 h-6" />
-                    <span className="text-2xl font-mono font-bold">{balance.toFixed(2)}</span>
+                <div className="bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-2 flex items-center gap-2">
+                    <Coins className="text-yellow-500 w-5 h-5" />
+                    <span className="text-lg font-mono font-bold">{balance.toFixed(2)}</span>
                 </div>
             </div>
 
-            <div className="flex flex-col xl:flex-row gap-12 w-full max-w-7xl items-start">
+            <div className="flex flex-col lg:flex-row gap-8 w-full max-w-7xl items-start">
 
                 {/* Left Column: Wheel & History */}
                 <div className="w-full xl:w-1/3 flex flex-col items-center gap-8">
@@ -200,6 +203,11 @@ export default function RoulettePage() {
 
                 {/* Right Column: Betting Table & Controls */}
                 <div className="w-full xl:w-2/3 space-y-8">
+                    {gamesEnabled.roulette === false && gameState === "IDLE" && (
+                        <div className="text-red-500 text-sm font-bold bg-red-500/10 border border-red-500/20 p-3 rounded-lg text-center animate-pulse">
+                            Game is currently disabled by Admin.
+                        </div>
+                    )}
                     {/* Chip Selector */}
                     <div className="flex flex-wrap gap-4 justify-center bg-zinc-900/80 p-6 rounded-2xl border border-zinc-800">
                         {CHIPS.map(amount => (
@@ -232,7 +240,7 @@ export default function RoulettePage() {
                     </div>
 
                     {/* Actions */}
-                    <div className="flex gap-4 justify-end">
+                    <div className="flex flex-wrap gap-2 sm:gap-4 justify-center">
                         <button
                             onClick={clearBets}
                             disabled={gameState === "SPINNING"}
@@ -243,7 +251,7 @@ export default function RoulettePage() {
 
                         <button
                             onClick={spin}
-                            disabled={gameState === "SPINNING" || getTotalBet() === 0 || getTotalBet() > balance}
+                            disabled={gameState === "SPINNING" || getTotalBet() === 0 || getTotalBet() > balance || gamesEnabled.roulette === false}
                             className="bg-gradient-to-br from-green-500 to-green-700 hover:from-green-400 hover:to-green-600 text-white font-black text-2xl px-12 py-4 rounded-xl shadow-[0_4px_0_rgb(21,128,61)] active:shadow-none active:translate-y-[4px] transition-all disabled:opacity-50 disabled:cursor-not-allowed uppercase tracking-widest flex items-center gap-3"
                         >
                             {gameState === "SPINNING" ? <Loader2 className="animate-spin w-8 h-8" /> : "SPIN"}

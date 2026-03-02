@@ -5,13 +5,27 @@ import { useAuth } from "./AuthContext";
 
 interface WalletContextType {
     balance: number;
+    bonusBalance: number;
     addFunds: (amount: number) => Promise<void>;
-    withdrawFunds: (amount: number) => Promise<void>;
+    withdrawFunds: (amount: number, paymentMethod: string, details: any) => Promise<void>;
     updateBalance: (amount: number) => void; // amount can be negative
     setBalance: (amount: number) => void; // Direct set
+    setBonusBalance: (amount: number) => void;
     refreshTransactions: () => Promise<void>;
     transactions: Transaction[];
+    withdrawalRequests: WithdrawalRequest[];
     isLoading: boolean;
+}
+
+interface WithdrawalRequest {
+    id: number;
+    amount: number;
+    status: string;
+    paymentMethod: string;
+    upiId?: string;
+    accountNumber?: string;
+    ifscCode?: string;
+    createdAt: string;
 }
 
 interface Transaction {
@@ -26,15 +40,19 @@ const WalletContext = createContext<WalletContextType | undefined>(undefined);
 export function WalletProvider({ children }: { children: React.ReactNode }) {
     const { user } = useAuth();
     const [balance, setBalance] = useState(0);
+    const [bonusBalance, setBonusBalance] = useState(0);
     const [transactions, setTransactions] = useState<Transaction[]>([]);
+    const [withdrawalRequests, setWithdrawalRequests] = useState<WithdrawalRequest[]>([]);
     const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
         if (user) {
             setBalance(user.balance);
+            setBonusBalance(user.bonusBalance || 0);
             fetchTransactions();
         } else {
             setBalance(0);
+            setBonusBalance(0);
             setTransactions([]);
         }
     }, [user]);
@@ -46,8 +64,14 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
                 const data = await res.json();
                 setTransactions(data.transactions);
             }
+
+            const reqRes = await fetch("/api/wallet/withdraw/requests");
+            if (reqRes.ok) {
+                const data = await reqRes.json();
+                setWithdrawalRequests(data.requests);
+            }
         } catch (error) {
-            console.error("Failed to fetch transactions", error);
+            console.error("Failed to fetch wallet data", error);
         } finally {
             setIsLoading(false);
         }
@@ -67,6 +91,9 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
 
             const data = await res.json();
             setBalance(data.balance);
+            if (data.bonusBalance !== undefined) {
+                setBonusBalance(data.bonusBalance);
+            }
             fetchTransactions(); // Refresh history
         } catch (error) {
             console.error("Add funds error", error);
@@ -74,12 +101,12 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
         }
     };
 
-    const withdrawFunds = async (amount: number) => {
+    const withdrawFunds = async (amount: number, paymentMethod: string, details: any) => {
         try {
             const res = await fetch("/api/wallet/withdraw", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ amount }),
+                body: JSON.stringify({ amount, paymentMethod, ...details }),
             });
 
             if (!res.ok) {
@@ -88,8 +115,13 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
             }
 
             const data = await res.json();
-            setBalance(data.balance);
-            fetchTransactions(); // Refresh history
+
+            // Immediately update the balance with the new deducted amount returned from API
+            if (data.balance !== undefined) {
+                setBalance(data.balance);
+            }
+
+            fetchTransactions(); // Refresh history and requests
         } catch (error) {
             console.error("Withdraw funds error", error);
             throw error;
@@ -107,7 +139,7 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
     };
 
     return (
-        <WalletContext.Provider value={{ balance, addFunds, withdrawFunds, updateBalance, setBalance, refreshTransactions: fetchTransactions, transactions, isLoading }}>
+        <WalletContext.Provider value={{ balance, bonusBalance, addFunds, withdrawFunds, updateBalance, setBalance, setBonusBalance, refreshTransactions: fetchTransactions, transactions, withdrawalRequests, isLoading }}>
             {children}
         </WalletContext.Provider>
     );

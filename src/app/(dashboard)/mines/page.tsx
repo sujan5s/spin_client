@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useWallet } from "@/context/WalletContext";
+import { useSystemSettings } from "@/context/SystemSettingsContext";
 import { Bomb, Diamond, Coins, Loader2, Trophy } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -17,7 +18,8 @@ interface GameState {
 }
 
 export default function MinesPage() {
-    const { balance, updateBalance, refreshTransactions } = useWallet();
+    const { balance, setBalance, setBonusBalance, refreshTransactions } = useWallet();
+    const { gamesEnabled } = useSystemSettings();
 
     // Inputs
     const [betAmount, setBetAmount] = useState("10");
@@ -57,7 +59,8 @@ export default function MinesPage() {
                 revealed: []
             });
 
-            updateBalance(-bet);
+            if (data.balance !== undefined) setBalance(data.balance);
+            if (data.bonusBalance !== undefined) setBonusBalance(data.bonusBalance);
             refreshTransactions();
 
         } catch (error: any) {
@@ -130,7 +133,8 @@ export default function MinesPage() {
                 mines: data.mines
             } : null);
 
-            updateBalance(data.payout);
+            if (data.balance !== undefined) setBalance(data.balance);
+            if (data.bonusBalance !== undefined) setBonusBalance(data.bonusBalance);
             refreshTransactions();
 
             toast.success(`Cashed out $${data.payout.toFixed(2)}!`);
@@ -178,6 +182,11 @@ export default function MinesPage() {
             <div className="flex flex-col md:flex-row gap-6 w-full max-w-5xl flex-1 min-h-0">
                 {/* Sidebar Controls */}
                 <div className="w-full md:w-80 bg-zinc-900 rounded-xl p-6 border border-zinc-800 h-fit flex flex-col gap-6 shrink-0">
+                    {gamesEnabled.mines === false && game?.status !== 'active' && (
+                        <div className="text-red-500 text-sm font-bold bg-red-500/10 border border-red-500/20 p-3 rounded-lg text-center animate-pulse">
+                            Game is currently disabled by Admin.
+                        </div>
+                    )}
                     <div>
                         <label className="text-sm text-zinc-400 font-medium mb-2 block">Bet Amount</label>
                         <div className="relative">
@@ -243,7 +252,7 @@ export default function MinesPage() {
                         ) : (
                             <button
                                 onClick={handleStartGame}
-                                disabled={isLoading || parseFloat(betAmount) < 10}
+                                disabled={isLoading || parseFloat(betAmount) < 10 || gamesEnabled.mines === false}
                                 className="w-full py-4 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-lg rounded-lg shadow-[0_5px_0_rgb(79,70,229)] active:shadow-none active:translate-y-[5px] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                             >
                                 {isLoading ? <Loader2 className="w-6 h-6 animate-spin mx-auto" /> : "BET"}

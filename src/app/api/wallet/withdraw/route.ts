@@ -22,11 +22,32 @@ export async function POST(request: Request) {
         const { payload } = await jwtVerify(token.value, JWT_SECRET);
         const userId = Number(payload.userId);
 
-        const { amount } = await request.json();
+        const { amount, paymentMethod, upiId, accountNumber, ifscCode } = await request.json();
 
         if (!amount || amount <= 0) {
             return NextResponse.json(
                 { error: "Invalid amount" },
+                { status: 400 }
+            );
+        }
+
+        if (!paymentMethod || !["UPI", "BANK"].includes(paymentMethod)) {
+            return NextResponse.json(
+                { error: "Invalid payment method" },
+                { status: 400 }
+            );
+        }
+
+        if (paymentMethod === "UPI" && !upiId) {
+            return NextResponse.json(
+                { error: "UPI ID is required" },
+                { status: 400 }
+            );
+        }
+
+        if (paymentMethod === "BANK" && (!accountNumber || !ifscCode)) {
+            return NextResponse.json(
+                { error: "Account number and IFSC code are required" },
                 { status: 400 }
             );
         }
@@ -46,38 +67,41 @@ export async function POST(request: Request) {
                 throw new Error("Insufficient balance");
             }
 
-            // 2. Update balance
+            // 2. Deduct balance immediately
             const updatedUser = await tx.user.update({
                 where: { id: userId },
                 data: {
                     balance: { decrement: amount },
-                },
+                }
             });
 
-            // 3. Create transaction record
-            // @ts-ignore
-            await tx.transaction.create({
+            // 3. Create Withdrawal Request
+            const withdrawalRequest = await tx.withdrawalRequest.create({
                 data: {
                     userId,
-                    type: "withdraw",
                     amount: amount,
-                },
+                    status: "PENDING",
+                    paymentMethod,
+                    upiId: paymentMethod === "UPI" ? upiId : null,
+                    accountNumber: paymentMethod === "BANK" ? accountNumber : null,
+                    ifscCode: paymentMethod === "BANK" ? ifscCode : null,
+                }
             });
 
             // 4. Create Notification
-            // @ts-ignore
             await tx.notification.create({
                 data: {
                     userId,
-                    title: "Withdrawal Successful",
-                    message: `You have successfully withdrawn $${amount.toFixed(2)}.`,
-                    type: "success",
+                    title: "Withdrawal Requested",
+                    message: `Your withdrawal request for $${amount.toFixed(2)} is pending approval.`,
+                    type: "info",
                 }
             });
 
             return {
                 balance: updatedUser.balance,
-                message: "Withdrawal successful"
+                message: "Withdrawal request submitted successfully",
+                request: withdrawalRequest
             };
         });
 
@@ -85,9 +109,9 @@ export async function POST(request: Request) {
 
     } catch (error: any) {
         console.error("Withdraw error:", error);
-        if (error.message === "Insufficient balance") {
+        if (error.message.includes("Insufficient") || error.message.includes("User not found")) {
             return NextResponse.json(
-                { error: "Insufficient balance" },
+                { error: error.message },
                 { status: 400 }
             );
         }

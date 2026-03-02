@@ -96,6 +96,14 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: "Invalid bet amount" }, { status: 400 });
         }
 
+        const sysSettings = await prisma.systemSettings.findFirst();
+        const bonusPct = sysSettings?.bonusDeductionPct ?? 20;
+        const gamesEnabled = sysSettings ? JSON.parse(sysSettings.gamesEnabled) : {};
+
+        if (gamesEnabled.roulette === false) {
+            return NextResponse.json({ error: "Game is currently disabled" }, { status: 400 });
+        }
+
         // Transaction handling
         const resultData = await prisma.$transaction(async (tx) => {
             // 1. Get User & Lock Balance (Optimistic checks usually, but here we just read)
@@ -104,7 +112,11 @@ export async function POST(request: Request) {
             });
 
             if (!user) throw new Error("User not found");
-            if (user.balance < totalBetAmount) throw new Error("Insufficient funds");
+
+            const deductBonus = Math.min(user.bonusBalance, totalBetAmount * (bonusPct / 100));
+            const deductMain = totalBetAmount - deductBonus;
+
+            if (user.balance < deductMain) throw new Error("Insufficient funds");
 
             // 2. Generate Result (0-36)
             // Secure random number generation is better, but Math.random is sufficient for this demo context
@@ -117,7 +129,10 @@ export async function POST(request: Request) {
             // 4. Update Balance
             const updatedUser = await tx.user.update({
                 where: { id: userId },
-                data: { balance: { increment: netChange } }
+                data: {
+                    balance: { increment: totalWinnings - deductMain },
+                    bonusBalance: { decrement: deductBonus }
+                }
             });
 
             // 5. Create Transaction Record
@@ -135,6 +150,7 @@ export async function POST(request: Request) {
                 result,
                 totalWinnings,
                 newBalance: updatedUser.balance,
+                newBonusBalance: updatedUser.bonusBalance,
                 netChange
             };
         });
@@ -144,6 +160,7 @@ export async function POST(request: Request) {
             result: resultData.result,
             winAmount: resultData.totalWinnings,
             balance: resultData.newBalance,
+            bonusBalance: resultData.newBonusBalance,
             netChange: resultData.netChange
         });
 

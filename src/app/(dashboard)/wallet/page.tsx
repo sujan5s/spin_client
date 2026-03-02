@@ -9,7 +9,7 @@ import { cn } from "@/lib/utils";
 const AMOUNTS = [10, 25, 50, 100, 250, 500];
 
 export default function WalletPage() {
-    const { balance, addFunds, transactions } = useWallet();
+    const { balance, bonusBalance, addFunds, transactions } = useWallet();
     const [selectedAmount, setSelectedAmount] = useState<number | null>(null);
     const [customAmount, setCustomAmount] = useState("");
     const [isProcessing, setIsProcessing] = useState(false);
@@ -47,8 +47,12 @@ export default function WalletPage() {
                         <Wallet className="h-32 w-32" />
                     </div>
                     <div>
-                        <h3 className="text-lg font-medium text-muted-foreground">Current Balance</h3>
+                        <h3 className="text-lg font-medium text-muted-foreground">Main Balance</h3>
                         <div className="text-5xl font-bold text-foreground mt-2 flex items-center gap-2"><TokenIcon size={40} />{balance.toFixed(2)}</div>
+                    </div>
+                    <div>
+                        <h3 className="text-sm font-medium text-yellow-500 mt-4">Bonus Balance</h3>
+                        <div className="text-2xl font-bold text-yellow-500 mt-1 flex items-center gap-2"><TokenIcon size={20} />{bonusBalance.toFixed(2)}</div>
                     </div>
                     <div className="flex items-center gap-2 text-sm text-primary">
                         <CheckCircle className="h-4 w-4" /> Verified Account

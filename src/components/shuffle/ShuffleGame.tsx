@@ -2,12 +2,14 @@
 
 import { useState, useEffect } from "react";
 import { useWallet } from "@/context/WalletContext";
+import { useSystemSettings } from "@/context/SystemSettingsContext";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
 import { Loader2, Trophy, HelpCircle, Eye } from "lucide-react";
 
 export default function ShuffleGame() {
-    const { balance, updateBalance, setBalance, refreshTransactions } = useWallet();
+    const { balance, updateBalance, setBalance, setBonusBalance, refreshTransactions } = useWallet();
+    const { gamesEnabled } = useSystemSettings();
     const [betAmount, setBetAmount] = useState<string>("10");
     const [gameState, setGameState] = useState<"idle" | "showing" | "shuffling" | "picking" | "revealed">("idle");
     const [winningCup, setWinningCup] = useState<number | null>(null);
@@ -42,6 +44,9 @@ export default function ShuffleGame() {
             const data = await res.json();
 
             setGameId(data.gameId);
+            if (data.balance !== undefined) setBalance(data.balance);
+            if (data.bonusBalance !== undefined) setBonusBalance(data.bonusBalance);
+
             const winner = data.winningCup; // 0, 1, 2
             setWinningCup(winner); // We know it, but we hide it visually until reveal
 
@@ -142,6 +147,11 @@ export default function ShuffleGame() {
             <div className="w-full max-w-4xl flex flex-col md:flex-row gap-8">
                 {/* Controls */}
                 <div className="w-full md:w-72 bg-zinc-900 p-6 rounded-xl border border-zinc-800 h-fit space-y-6">
+                    {gamesEnabled.shuffle === false && gameState === "idle" && (
+                        <div className="text-red-500 text-sm font-bold bg-red-500/10 border border-red-500/20 p-3 rounded-lg text-center animate-pulse">
+                            Game is currently disabled by Admin.
+                        </div>
+                    )}
                     <div>
                         <label className="text-sm text-zinc-400 font-medium mb-2 block">Bet Amount</label>
                         <input
@@ -158,8 +168,8 @@ export default function ShuffleGame() {
                     </div>
                     <button
                         onClick={handleStart}
-                        disabled={gameState === "showing" || gameState === "shuffling" || gameState === "picking"}
-                        className="w-full py-4 bg-purple-600 hover:bg-purple-500 text-white font-bold rounded-lg shadow-[0_4px_0_rgb(147,51,234)] active:shadow-none active:translate-y-[4px] transition-all disabled:opacity-50"
+                        disabled={gameState === "showing" || gameState === "shuffling" || gameState === "picking" || gamesEnabled.shuffle === false}
+                        className="w-full py-4 bg-purple-600 hover:bg-purple-500 text-white font-bold rounded-lg shadow-[0_4px_0_rgb(147,51,234)] active:shadow-none active:translate-y-[4px] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                         {gameState === "showing" || gameState === "shuffling" ? "SHUFFLING..." : gameState === "picking" ? "PICK A CUP" : gameState === "revealed" ? "PLAY AGAIN" : "START GAME"}
                     </button>

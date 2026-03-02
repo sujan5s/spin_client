@@ -31,6 +31,14 @@ export async function POST(request: Request) {
             );
         }
 
+        const sysSettings = await prisma.systemSettings.findFirst();
+        const bonusPct = sysSettings?.bonusDeductionPct ?? 20;
+        const gamesEnabled = sysSettings ? JSON.parse(sysSettings.gamesEnabled) : {};
+
+        if (gamesEnabled.luckydraw === false) {
+            return NextResponse.json({ error: "Game is currently disabled" }, { status: 400 });
+        }
+
         // Transaction to ensure atomicity
         const result = await prisma.$transaction(async (tx) => {
             // 1. Get user and check balance
@@ -42,15 +50,26 @@ export async function POST(request: Request) {
                 throw new Error("User not found");
             }
 
-            if (user.balance < amount) {
-                throw new Error("Insufficient balance");
+            // Calculate split
+            const maxBonusDeduction = amount * (bonusPct / 100);
+            let bonusDeduction = 0;
+            let mainDeduction = amount;
+
+            if (user.bonusBalance > 0) {
+                bonusDeduction = Math.min(user.bonusBalance, maxBonusDeduction);
+                mainDeduction = amount - bonusDeduction;
+            }
+
+            if (user.balance < mainDeduction) {
+                throw new Error("Insufficient main balance");
             }
 
             // 2. Update balance
             const updatedUser = await tx.user.update({
                 where: { id: userId },
                 data: {
-                    balance: { decrement: amount },
+                    balance: { decrement: mainDeduction },
+                    bonusBalance: { decrement: bonusDeduction },
                 },
             });
 
@@ -88,6 +107,7 @@ export async function POST(request: Request) {
 
             return {
                 balance: updatedUser.balance,
+                bonusBalance: updatedUser.bonusBalance,
                 ticket,
                 message: "Ticket purchased successfully"
             };
@@ -97,7 +117,7 @@ export async function POST(request: Request) {
 
     } catch (error: any) {
         console.error("Ticket purchase error:", error);
-        if (error.message === "Insufficient balance") {
+        if (error.message === "Insufficient main balance" || error.message === "Insufficient balance") {
             return NextResponse.json(
                 { error: "Insufficient balance" },
                 { status: 400 }
