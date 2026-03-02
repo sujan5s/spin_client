@@ -1,4 +1,7 @@
 import { NextResponse } from "next/server";
+import { PrismaClient } from "@prisma/client";
+
+const prisma = new PrismaClient();
 
 export async function POST(request: Request) {
     try {
@@ -16,6 +19,25 @@ export async function POST(request: Request) {
 
         if (!beResponse.ok) {
             return NextResponse.json(data, { status: beResponse.status });
+        }
+
+        // Record login log
+        try {
+            const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim()
+                ?? request.headers.get("x-real-ip")
+                ?? "unknown";
+            const ua = request.headers.get("user-agent") ?? "unknown";
+            await prisma.loginLog.create({
+                data: {
+                    userId: data.user.id,
+                    email: data.user.email,
+                    ipAddress: ip,
+                    userAgent: `[Google] ${ua}`,
+                },
+            });
+        } catch (logErr) {
+            console.error("Login log write failed (google):", logErr);
+            // non-fatal
         }
 
         // Create response with cookie

@@ -6,22 +6,25 @@ import { Sidebar } from "@/components/Sidebar";
 import { Header } from "@/components/Header";
 import { useAuth } from "@/context/AuthContext";
 import { AnimatePresence, motion } from "framer-motion";
+import Footer from "@/components/Footer";
 
 export default function DashboardLayout({
     children,
 }: {
     children: React.ReactNode;
 }) {
-    const { isAuthenticated } = useAuth();
+    const { isAuthenticated, isLoading } = useAuth();
     const router = useRouter();
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
     useEffect(() => {
-        if (!isAuthenticated) {
+        if (!isLoading && !isAuthenticated) {
             router.push("/");
         }
-    }, [isAuthenticated, router]);
+    }, [isAuthenticated, isLoading, router]);
 
+    // Show nothing while auth state is being determined
+    if (isLoading) return null;
     if (!isAuthenticated) return null;
 
     return (
@@ -66,6 +69,7 @@ export default function DashboardLayout({
                     <div className="relative z-10">
                         {children}
                     </div>
+                    <Footer />
                 </main>
             </div>
         </div>

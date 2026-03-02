@@ -2,10 +2,12 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Users, Trophy, Settings, Bomb, Crown, FileText, IndianRupee } from "lucide-react";
+import { Users, Trophy, Settings, Bomb, Crown, FileText, IndianRupee, BarChart2, LogIn } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const NAV_ITEMS = [
+    { name: "Statistics", href: "/admin/statistics", icon: BarChart2 },
+    { name: "Login Logs", href: "/admin/login-logs", icon: LogIn },
     { name: "Users Management", href: "/admin", icon: Users, exact: true },
     { name: "Withdraw Requests", href: "/admin/withdraw-requests", icon: IndianRupee },
     { name: "KYC Requests", href: "/admin/kyc-requests", icon: FileText },

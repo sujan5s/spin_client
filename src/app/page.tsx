@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { Gamepad2, ArrowRight, Wallet, Trophy, ShieldCheck, Zap, Coins, Dices, Bomb, Crown, Eye, LayoutDashboard, Ticket } from "lucide-react";
 import { motion } from "framer-motion";
+import Footer from "@/components/Footer";
 
 const fadeIn = {
   hidden: { opacity: 0, y: 20 },
@@ -199,18 +200,7 @@ export default function Home() {
         </section>
       </main>
 
-      {/* FOOTER */}
-      <footer className="w-full border-t border-border bg-black/50 py-12 mt-10">
-        <div className="max-w-7xl mx-auto px-6 flex flex-col md:flex-row justify-between items-center gap-6">
-          <div className="flex items-center space-x-2 opacity-50">
-            <Gamepad2 className="h-6 w-6" />
-            <span className="text-xl font-bold tracking-tighter">GAMEVERSE</span>
-          </div>
-          <p className="text-muted-foreground text-sm opacity-50 text-center md:text-left">
-            © 2026 GameVerse Ltd. All rights reserved. Play responsibly. 18+ only.
-          </p>
-        </div>
-      </footer>
+      <Footer />
     </div>
   );
 }

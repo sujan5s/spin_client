@@ -46,8 +46,8 @@ export default function AdminUsersPage() {
         <div className="space-y-6">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
-                    <h1 className="text-3xl font-bold">Users Overview</h1>
-                    <p className="text-gray-400">Manage your platform users and track their activities.</p>
+                    <h1 className="text-xl sm:text-3xl font-bold">Users Overview</h1>
+                    <p className="text-gray-400 text-sm">Manage your platform users and track their activities.</p>
                 </div>
 
                 <div className="relative">
@@ -63,7 +63,7 @@ export default function AdminUsersPage() {
             </div>
 
             {/* Stats Cards Row (Optional - just aggregated stats from the list) */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div className="p-6 bg-gray-900 rounded-xl border border-gray-800">
                     <div className="flex items-center gap-4">
                         <div className="p-3 bg-blue-600/20 text-blue-500 rounded-lg">

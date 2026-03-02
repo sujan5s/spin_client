@@ -72,7 +72,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
             const data = await res.json();
             setUser(data.user);
-            router.push("/dashboard");
+            router.push("/home");
         } catch (error) {
             console.error("Login error", error);
             throw error;
@@ -94,7 +94,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
             const data = await res.json();
             setUser(data.user);
-            router.push("/dashboard");
+            router.push("/home");
         } catch (error) {
             console.error("Signup error", error);
             throw error;
@@ -117,7 +117,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
             const data = await res.json();
             setUser(data.user);
-            router.push("/dashboard");
+            router.push("/home");
         } catch (error) {
             console.error("Google Login error", error);
             throw error;

@@ -131,7 +131,7 @@ export function Header({ onMenuClick }: { onMenuClick?: () => void }) {
                                     initial={{ opacity: 0, y: 10 }}
                                     animate={{ opacity: 1, y: 0 }}
                                     exit={{ opacity: 0, y: 10 }}
-                                    className="absolute right-0 mt-2 w-80 bg-card border border-border rounded-xl shadow-lg overflow-hidden"
+                                    className="fixed sm:absolute right-0 top-16 sm:top-auto sm:mt-2 left-0 sm:left-auto mx-2 sm:mx-0 sm:w-80 bg-card border border-border rounded-xl shadow-xl overflow-hidden z-[100]"
                                 >
                                     <div className="p-4 border-b border-border flex justify-between items-center">
                                         <h3 className="font-semibold">Notifications</h3>
