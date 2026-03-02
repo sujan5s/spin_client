@@ -34,6 +34,8 @@ export async function GET(request: Request) {
             dragonGamesCount,
             totalTickets,
             totalBalance,
+            pendingKyc,
+            pendingDeletions,
         ] = await Promise.all([
             prisma.user.count(),
             // users who have transactions in last 7 days
@@ -43,7 +45,7 @@ export async function GET(request: Request) {
             // KYC breakdown
             prisma.user.groupBy({ by: ["kycStatus"], _count: { id: true } }),
             // total deposits
-            prisma.transaction.aggregate({ where: { type: "DEPOSIT" }, _sum: { amount: true } }),
+            prisma.transaction.aggregate({ where: { type: { in: ["DEPOSIT", "deposit", "CREDIT"] } }, _sum: { amount: true } }),
             // total withdrawals amount
             prisma.withdrawalRequest.aggregate({ where: { status: "SUCCESSFUL" }, _sum: { amount: true } }),
             prisma.withdrawalRequest.count({ where: { status: "PENDING" } }),
@@ -55,6 +57,8 @@ export async function GET(request: Request) {
             prisma.dragonTowerGame.count(),
             prisma.ticket.count(),
             prisma.user.aggregate({ _sum: { balance: true } }),
+            prisma.user.count({ where: { kycStatus: "PENDING" } }),
+            prisma.accountDeletionRequest.count({ where: { status: "PENDING" } }),
         ]);
 
         // ── User Growth (last 30 days grouped by day) ──────────
@@ -79,7 +83,7 @@ export async function GET(request: Request) {
 
         // ── Daily Revenue (last 30 days) ───────────────────────
         const depositsRaw = await prisma.transaction.findMany({
-            where: { type: "DEPOSIT", createdAt: { gte: thirtyDaysAgo } },
+            where: { type: { in: ["DEPOSIT", "deposit", "CREDIT"] }, createdAt: { gte: thirtyDaysAgo } },
             select: { createdAt: true, amount: true },
         });
 
@@ -143,6 +147,8 @@ export async function GET(request: Request) {
                 withdrawalApprovalRate: approvalRate,
                 totalTransactions,
                 totalGamesPlayed: minesGamesCount + shuffleGamesCount + dragonGamesCount,
+                pendingKycRequests: pendingKyc,
+                pendingDeletionRequests: pendingDeletions,
             },
             userGrowth,
             revenueChart,

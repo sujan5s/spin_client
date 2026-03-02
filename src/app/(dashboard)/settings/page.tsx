@@ -24,8 +24,12 @@ export default function SettingsPage() {
     const [isPasswordLoading, setIsPasswordLoading] = useState(false);
     const [passwordMessage, setPasswordMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
 
-    // Delete Account State
+    // Delete Request State
+    const [deletionReason, setDeletionReason] = useState("");
     const [isDeleteLoading, setIsDeleteLoading] = useState(false);
+    const [deleteMessage, setDeleteMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
+    const [existingRequest, setExistingRequest] = useState<{ status: string; createdAt: string } | null>(null);
+    const [deleteFormOpen, setDeleteFormOpen] = useState(false);
 
     const handleUpdateProfile = async () => {
         setIsProfileLoading(true);
@@ -74,24 +78,38 @@ export default function SettingsPage() {
         }
     };
 
-    const handleDeleteAccount = async () => {
-        if (!confirm("Are you sure you want to delete your account? This action cannot be undone.")) return;
-
-        setIsDeleteLoading(true);
+    const fetchExistingRequest = async () => {
         try {
-            const res = await fetch("/api/settings/delete-account", {
-                method: "DELETE",
-            });
+            const res = await fetch("/api/settings/deletion-request");
+            const data = await res.json();
+            setExistingRequest(data.existing ?? null);
+        } catch { /* silent */ }
+    };
 
+    const handleRequestDeletion = async () => {
+        if (deletionReason.trim().length < 20) {
+            setDeleteMessage({ type: "error", text: "Please provide at least 20 characters explaining why you want to delete your account." });
+            return;
+        }
+        setIsDeleteLoading(true);
+        setDeleteMessage(null);
+        try {
+            const res = await fetch("/api/settings/deletion-request", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ reason: deletionReason }),
+            });
+            const data = await res.json();
             if (res.ok) {
-                await logout();
-                router.push("/login");
+                setDeleteMessage({ type: "success", text: "Your deletion request has been submitted. Our team will review it within 2–3 business days." });
+                setDeletionReason("");
+                setDeleteFormOpen(false);
+                fetchExistingRequest();
             } else {
-                alert("Failed to delete account");
+                setDeleteMessage({ type: "error", text: data.error ?? "Failed to submit" });
             }
-        } catch (error) {
-            console.error("Delete account error", error);
-            alert("An error occurred");
+        } catch {
+            setDeleteMessage({ type: "error", text: "Something went wrong. Please try again." });
         } finally {
             setIsDeleteLoading(false);
         }
@@ -202,22 +220,77 @@ export default function SettingsPage() {
 
             {/* Danger Zone */}
             <div className="bg-red-500/5 border border-red-500/20 rounded-xl p-6">
-                <h3 className="text-xl font-bold mb-6 flex items-center gap-2 text-red-500">
+                <h3 className="text-xl font-bold mb-1 flex items-center gap-2 text-red-500">
                     <Trash2 className="h-5 w-5" /> Danger Zone
                 </h3>
-                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 justify-between">
-                    <div>
-                        <div className="font-medium text-red-500">Delete Account</div>
-                        <div className="text-sm text-red-500/70">Permanently delete your account and all data</div>
+                <p className="text-red-500/60 text-sm mb-5">Account deletion is permanent and cannot be undone.</p>
+
+                {existingRequest ? (
+                    <div className={`rounded-lg p-4 text-sm ${existingRequest.status === "PENDING" ? "bg-yellow-500/10 border border-yellow-500/20 text-yellow-400" :
+                            existingRequest.status === "REJECTED" ? "bg-zinc-800 border border-zinc-700 text-zinc-400" :
+                                "bg-emerald-500/10 border border-emerald-500/20 text-emerald-400"
+                        }`}>
+                        {existingRequest.status === "PENDING" && "⏳ Your deletion request is pending admin review."}
+                        {existingRequest.status === "REJECTED" && "❌ Your deletion request was rejected. Contact support for more info."}
+                        {existingRequest.status === "APPROVED" && "✅ Your account has been scheduled for deletion."}
                     </div>
-                    <button
-                        onClick={handleDeleteAccount}
-                        disabled={isDeleteLoading}
-                        className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg text-sm font-medium transition-colors flex items-center gap-2 shrink-0"
-                    >
-                        {isDeleteLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Delete Account"}
-                    </button>
-                </div>
+                ) : (
+                    <>
+                        {!deleteFormOpen ? (
+                            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 justify-between">
+                                <div>
+                                    <div className="font-medium text-red-500">Request Account Deletion</div>
+                                    <div className="text-sm text-red-500/70">Submit a request and our team will review it within 2–3 business days.</div>
+                                </div>
+                                <button
+                                    onClick={() => { setDeleteFormOpen(true); setDeleteMessage(null); fetchExistingRequest(); }}
+                                    className="px-4 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 rounded-lg text-sm font-medium transition-colors shrink-0"
+                                >
+                                    Request Deletion
+                                </button>
+                            </div>
+                        ) : (
+                            <div className="space-y-4 max-w-lg">
+                                <div>
+                                    <label className="text-sm font-medium text-red-400 mb-1.5 block">Why do you want to delete your account? <span className="text-red-500/60">(min. 20 characters)</span></label>
+                                    <textarea
+                                        value={deletionReason}
+                                        onChange={e => setDeletionReason(e.target.value)}
+                                        rows={4}
+                                        placeholder="Please explain in detail why you want to delete your account..."
+                                        className="w-full bg-secondary/50 border border-red-500/20 focus:border-red-500/50 rounded-lg px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-red-500/20 resize-none"
+                                    />
+                                    <div className={`text-xs mt-1 text-right ${deletionReason.length >= 20 ? "text-green-500" : "text-muted-foreground"}`}>
+                                        {deletionReason.length} / 20 min
+                                    </div>
+                                </div>
+
+                                {deleteMessage && (
+                                    <p className={`text-sm ${deleteMessage.type === "success" ? "text-green-500" : "text-red-400"}`}>
+                                        {deleteMessage.text}
+                                    </p>
+                                )}
+
+                                <div className="flex gap-3">
+                                    <button
+                                        onClick={() => { setDeleteFormOpen(false); setDeleteMessage(null); }}
+                                        className="px-4 py-2 bg-secondary hover:bg-secondary/80 text-foreground rounded-lg text-sm font-medium transition-colors"
+                                    >
+                                        Cancel
+                                    </button>
+                                    <button
+                                        onClick={handleRequestDeletion}
+                                        disabled={isDeleteLoading || deletionReason.trim().length < 20}
+                                        className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg text-sm font-medium transition-colors flex items-center gap-2 disabled:opacity-40"
+                                    >
+                                        {isDeleteLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+                                        Submit Request
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+                    </>
+                )}
             </div>
         </div>
     );

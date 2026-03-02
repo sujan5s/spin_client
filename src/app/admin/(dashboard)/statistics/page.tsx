@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import {
     Users, TrendingUp, TrendingDown, Wallet, Shield, Gamepad2,
     RefreshCw, DollarSign, CheckCircle, XCircle, Clock, Activity,
-    BarChart2, PieChart, ArrowUpRight, ArrowDownRight
+    BarChart2, PieChart, ArrowUpRight, ArrowDownRight, FileText, Trash2
 } from "lucide-react";
 
 // ── Types ────────────────────────────────────────────────────
@@ -21,6 +21,8 @@ interface Stats {
         withdrawalApprovalRate: number;
         totalTransactions: number;
         totalGamesPlayed: number;
+        pendingKycRequests: number;
+        pendingDeletionRequests: number;
     };
     userGrowth: { date: string; count: number }[];
     revenueChart: { date: string; amount: number }[];
@@ -251,14 +253,17 @@ export default function StatisticsPage() {
             </div>
 
             {/* KPI Grid */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
                 <KpiCard label="Total Users" value={kpis.totalUsers.toLocaleString()} icon={Users} color="#00ff9d" sub={`${kpis.activeUsersLast7Days} active this week`} trend="up" />
+                <KpiCard label="Withdrawal %" value={`${kpis.withdrawalApprovalRate}%`} icon={CheckCircle} color="#00ff9d" sub={`${kpis.rejectedWithdrawals} rejected`} />
+                <KpiCard label="Pending Withdrawals" value={kpis.pendingWithdrawals} icon={Clock} color="#f59e0b" sub="Awaiting action" trend={kpis.pendingWithdrawals > 5 ? "down" : null} />
+                <KpiCard label="Pending KYC" value={kpis.pendingKycRequests} icon={FileText} color="#facc15" sub="Awaiting review" trend={kpis.pendingKycRequests > 5 ? "down" : null} />
+                <KpiCard label="Pending Deletions" value={kpis.pendingDeletionRequests} icon={Trash2} color="#ef4444" sub="Account requests" trend={kpis.pendingDeletionRequests > 0 ? "down" : null} />
+
+                <KpiCard label="Platform Balance" value={`₹${kpis.platformBalance.toLocaleString()}`} icon={Wallet} color="#10b981" sub="Sum of all user balances" />
                 <KpiCard label="Total Deposited" value={`₹${kpis.totalDeposited.toLocaleString()}`} icon={DollarSign} color="#00e5ff" sub="All-time deposits" />
                 <KpiCard label="Total Withdrawn" value={`₹${kpis.totalWithdrawn.toLocaleString()}`} icon={TrendingDown} color="#f59e0b" sub={`${kpis.successfulWithdrawals} successful`} />
                 <KpiCard label="Games Played" value={kpis.totalGamesPlayed.toLocaleString()} icon={Gamepad2} color="#a855f7" sub="Mines + Shuffle + Dragon" />
-                <KpiCard label="Platform Balance" value={`₹${kpis.platformBalance.toLocaleString()}`} icon={Wallet} color="#10b981" sub="Sum of all user balances" />
-                <KpiCard label="Pending Withdrawals" value={kpis.pendingWithdrawals} icon={Clock} color="#f59e0b" sub="Awaiting admin action" trend={kpis.pendingWithdrawals > 5 ? "down" : null} />
-                <KpiCard label="Withdrawal Approval %" value={`${kpis.withdrawalApprovalRate}%`} icon={CheckCircle} color="#00ff9d" sub={`${kpis.rejectedWithdrawals} rejected`} />
                 <KpiCard label="Total Transactions" value={kpis.totalTransactions.toLocaleString()} icon={Activity} color="#00e5ff" sub="All-time transaction count" />
             </div>
 
