@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Gamepad2, ArrowRight, Wallet, Trophy, ShieldCheck, Zap, Coins, Dices, Bomb, Crown, Eye, LayoutDashboard, Ticket } from "lucide-react";
 import { motion } from "framer-motion";
 import Footer from "@/components/Footer";
+import { InfoMarquee } from "@/components/InfoMarquee";
 
 const fadeIn = {
   hidden: { opacity: 0, y: 20 },
@@ -63,6 +64,8 @@ export default function Home() {
           </Link>
         </div>
       </nav>
+
+      <InfoMarquee />
 
       <main className="relative z-10 flex flex-col items-center justify-center">
 

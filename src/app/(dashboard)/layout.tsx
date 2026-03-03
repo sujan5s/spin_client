@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { Sidebar } from "@/components/Sidebar";
 import { Header } from "@/components/Header";
 import { InfoMarquee } from "@/components/InfoMarquee";
@@ -16,7 +16,11 @@ export default function DashboardLayout({
 }) {
     const { isAuthenticated, isLoading } = useAuth();
     const router = useRouter();
+    const pathname = usePathname();
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+    // Determines paths where marquee should be visible
+    const isMarqueeVisible = pathname === '/home' || pathname === '/spin' || pathname === '/dashboard';
 
     useEffect(() => {
         if (!isLoading && !isAuthenticated) {
@@ -62,7 +66,7 @@ export default function DashboardLayout({
             {/* Main Content */}
             <div className="flex flex-1 flex-col overflow-hidden md:pl-64">
                 <Header onMenuClick={() => setIsMobileMenuOpen(true)} />
-                <InfoMarquee />
+                {isMarqueeVisible && <InfoMarquee />}
                 <main className="flex-1 overflow-y-auto p-4 md:p-6 relative">
                     {/* Background decoration */}
                     <div className="absolute inset-0 z-0 pointer-events-none">

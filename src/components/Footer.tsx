@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Gamepad2, Github, Twitter, Mail, Shield } from "lucide-react";
+import { Gamepad2, Instagram, Mail, Shield } from "lucide-react";
 
 export default function Footer() {
     const year = 2026;
@@ -21,8 +21,7 @@ export default function Footer() {
                             The ultimate gaming platform with provably fair games, instant deposits, and fast KYC withdrawals.
                         </p>
                         <div className="flex gap-3 pt-1">
-                            <a href="#" aria-label="Twitter" className="hover:text-[#00ff9d] transition-colors"><Twitter className="h-4 w-4" /></a>
-                            <a href="#" aria-label="GitHub" className="hover:text-[#00ff9d] transition-colors"><Github className="h-4 w-4" /></a>
+                            <a href="#" aria-label="Instagram" className="hover:text-[#00ff9d] transition-colors"><Instagram className="h-4 w-4" /></a>
                             <a href="mailto:support@gameverse.com" aria-label="Email" className="hover:text-[#00ff9d] transition-colors"><Mail className="h-4 w-4" /></a>
                         </div>
                     </div>
@@ -31,9 +30,16 @@ export default function Footer() {
                     <div className="space-y-3">
                         <h3 className="font-semibold text-white text-sm uppercase tracking-wider">Games</h3>
                         <ul className="space-y-2">
-                            {["Spin & Win", "Mines", "Plinko", "Roulette", "Slots", "Dragon Tower"].map(g => (
-                                <li key={g}>
-                                    <Link href="/home" className="hover:text-[#00ff9d] transition-colors">{g}</Link>
+                            {[
+                                { label: "Spin & Win", href: "/spin" },
+                                { label: "Mines", href: "/mines" },
+                                { label: "Plinko", href: "/plinko" },
+                                { label: "Roulette", href: "/roulette" },
+                                { label: "Slots", href: "/slots" },
+                                { label: "Dragon Tower", href: "/dragontower" },
+                            ].map(g => (
+                                <li key={g.label}>
+                                    <Link href={g.href} className="hover:text-[#00ff9d] transition-colors">{g.label}</Link>
                                 </li>
                             ))}
                         </ul>
@@ -61,9 +67,14 @@ export default function Footer() {
                     <div className="space-y-3">
                         <h3 className="font-semibold text-white text-sm uppercase tracking-wider">Legal</h3>
                         <ul className="space-y-2">
-                            {["Privacy Policy", "Terms of Service", "Responsible Gaming", "Cookie Policy"].map(l => (
-                                <li key={l}>
-                                    <a href="#" className="hover:text-[#00ff9d] transition-colors">{l}</a>
+                            {[
+                                { label: "Privacy Policy", href: "/privacy-policy" },
+                                { label: "Terms of Service", href: "/terms-of-service" },
+                                { label: "Responsible Gaming", href: "/responsible-gaming" },
+                                { label: "Cookie Policy", href: "/cookie-policy" },
+                            ].map(l => (
+                                <li key={l.label}>
+                                    <Link href={l.href} className="hover:text-[#00ff9d] transition-colors">{l.label}</Link>
                                 </li>
                             ))}
                         </ul>
