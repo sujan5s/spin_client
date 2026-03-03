@@ -1,16 +1,22 @@
 import { NextResponse } from "next/server";
 import { PrismaClient } from "@prisma/client";
 import { cookies } from "next/headers";
+import { jwtVerify } from "jose";
 
 const prisma = new PrismaClient();
+const JWT_SECRET = new TextEncoder().encode(process.env.JWT_SECRET || "default-secret-key");
 
 export async function GET(request: Request) {
-    // same auth pattern as other admin routes
     const cookieStore = await cookies();
     const token = cookieStore.get("admin_token");
-    // token presence is checked but not hard-blocked (matches existing admin pattern)
+
+    if (!token) {
+        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
 
     try {
+        await jwtVerify(token.value, JWT_SECRET);
+
         const now = new Date();
         const thirtyDaysAgo = new Date(now);
         thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
@@ -19,34 +25,12 @@ export async function GET(request: Request) {
         sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
 
         // ── KPI Counts ─────────────────────────────────────────
-        const [
-            totalUsers,
-            activeUsersLast7Days,
-            kycCounts,
-            depositTotal,
-            withdrawTotal,
-            pendingWithdrawals,
-            successfulWithdrawals,
-            rejectedWithdrawals,
-            totalTransactions,
-            minesGamesCount,
-            shuffleGamesCount,
-            dragonGamesCount,
-            totalTickets,
-            totalBalance,
-            pendingKyc,
-            pendingDeletions,
-        ] = await Promise.all([
+        // Use allSettled so one missing table doesn't crash the entire endpoint
+        const settled = await Promise.allSettled([
             prisma.user.count(),
-            // users who have transactions in last 7 days
-            prisma.user.count({
-                where: { transactions: { some: { createdAt: { gte: sevenDaysAgo } } } }
-            }),
-            // KYC breakdown
+            prisma.user.count({ where: { transactions: { some: { createdAt: { gte: sevenDaysAgo } } } } }),
             prisma.user.groupBy({ by: ["kycStatus"], _count: { id: true } }),
-            // total deposits
             prisma.transaction.aggregate({ where: { type: { in: ["DEPOSIT", "deposit", "CREDIT"] } }, _sum: { amount: true } }),
-            // total withdrawals amount
             prisma.withdrawalRequest.aggregate({ where: { status: "SUCCESSFUL" }, _sum: { amount: true } }),
             prisma.withdrawalRequest.count({ where: { status: "PENDING" } }),
             prisma.withdrawalRequest.count({ where: { status: "SUCCESSFUL" } }),
@@ -60,6 +44,29 @@ export async function GET(request: Request) {
             prisma.user.count({ where: { kycStatus: "PENDING" } }),
             prisma.accountDeletionRequest.count({ where: { status: "PENDING" } }),
         ]);
+
+        const val = <T>(i: number, fallback: T): T =>
+            settled[i].status === "fulfilled" ? (settled[i] as PromiseFulfilledResult<T>).value : fallback;
+
+        const totalUsers = val(0, 0) as number;
+        const activeUsersLast7Days = val(1, 0) as number;
+        const kycCounts = val(2, []) as { kycStatus: string; _count: { id: number } }[];
+        const depositTotal = val(3, { _sum: { amount: 0 } }) as { _sum: { amount: number | null } };
+        const withdrawTotal = val(4, { _sum: { amount: 0 } }) as { _sum: { amount: number | null } };
+        const pendingWithdrawals = val(5, 0) as number;
+        const successfulWithdrawals = val(6, 0) as number;
+        const rejectedWithdrawals = val(7, 0) as number;
+        const totalTransactions = val(8, 0) as number;
+        const minesGamesCount = val(9, 0) as number;
+        const shuffleGamesCount = val(10, 0) as number;
+        const dragonGamesCount = val(11, 0) as number;
+        const totalTickets = val(12, 0) as number;
+        const totalBalance = val(13, { _sum: { balance: 0 } }) as { _sum: { balance: number | null } };
+        const pendingKyc = val(14, 0) as number;
+        const pendingDeletions = val(15, 0) as number;
+
+        // Log any individual failures for debugging (non-fatal)
+        settled.forEach((r, i) => { if (r.status === "rejected") console.warn(`Stats query[${i}] failed:`, r.reason?.message ?? r.reason); });
 
         // ── User Growth (last 30 days grouped by day) ──────────
         const usersRaw = await prisma.user.findMany({

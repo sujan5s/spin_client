@@ -1,8 +1,10 @@
 import { NextResponse } from "next/server";
 import { PrismaClient } from "@prisma/client";
 import { cookies } from "next/headers";
+import { jwtVerify } from "jose";
 
 const prisma = new PrismaClient();
+const JWT_SECRET = new TextEncoder().encode(process.env.JWT_SECRET || "default-secret-key");
 
 export async function GET(request: Request) {
     const cookieStore = await cookies();
@@ -10,7 +12,10 @@ export async function GET(request: Request) {
     if (!token) {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+
     try {
+        await jwtVerify(token.value, JWT_SECRET);
+
         const { searchParams } = new URL(request.url);
         const page = parseInt(searchParams.get("page") ?? "1");
         const limit = 50;
