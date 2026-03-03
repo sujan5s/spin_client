@@ -4,32 +4,34 @@
   /* Gaming Theme - Dark Mode Default */
   --background: #050505;
   --foreground: #ededed;
-  
+
   --card: #121212;
   --card-foreground: #ededed;
-  
+
   --popover: #121212;
   --popover-foreground: #ededed;
-  
-  --primary: #00ff9d; /* Neon Green */
+
+  --primary: #00ff9d;
+  /* Neon Green */
   --primary-foreground: #000000;
-  
+
   --secondary: #27272a;
   --secondary-foreground: #ededed;
-  
+
   --muted: #27272a;
   --muted-foreground: #a1a1aa;
-  
-  --accent: #00e5ff; /* Cyan */
+
+  --accent: #00e5ff;
+  /* Cyan */
   --accent-foreground: #000000;
-  
+
   --destructive: #ef4444;
   --destructive-foreground: #ededed;
 
   --border: #27272a;
   --input: #27272a;
   --ring: #00ff9d;
-  
+
   --radius: 0.5rem;
 }
 
@@ -72,6 +74,36 @@ body {
 }
 
 * {
-  -ms-overflow-style: none;  /* IE/Edge */
-  scrollbar-width: none;     /* Firefox */
+  -ms-overflow-style: none;
+  /* IE/Edge */
+  scrollbar-width: none;
+  /* Firefox */
+}
+
+@keyframes marquee {
+  0% {
+    transform: translateX(0%);
+  }
+
+  100% {
+    transform: translateX(-100%);
+  }
+}
+
+@keyframes marquee2 {
+  0% {
+    transform: translateX(100%);
+  }
+
+  100% {
+    transform: translateX(0%);
+  }
+}
+
+.animate-marquee {
+  animation: marquee 25s linear infinite;
+}
+
+.animate-marquee2 {
+  animation: marquee2 25s linear infinite;
 }

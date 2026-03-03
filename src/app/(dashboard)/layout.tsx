@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Sidebar } from "@/components/Sidebar";
 import { Header } from "@/components/Header";
+import { InfoMarquee } from "@/components/InfoMarquee";
 import { useAuth } from "@/context/AuthContext";
 import { AnimatePresence, motion } from "framer-motion";
 import Footer from "@/components/Footer";
@@ -61,6 +62,7 @@ export default function DashboardLayout({
             {/* Main Content */}
             <div className="flex flex-1 flex-col overflow-hidden md:pl-64">
                 <Header onMenuClick={() => setIsMobileMenuOpen(true)} />
+                <InfoMarquee />
                 <main className="flex-1 overflow-y-auto p-4 md:p-6 relative">
                     {/* Background decoration */}
                     <div className="absolute inset-0 z-0 pointer-events-none">

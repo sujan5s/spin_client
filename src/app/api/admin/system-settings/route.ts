@@ -33,7 +33,9 @@ export async function GET(request: Request) {
             bonusDeductionPct: settings.bonusDeductionPct,
             referralBonusNewUser: settings.referralBonusNewUser,
             referralBonusReferrer: settings.referralBonusReferrer,
-            gamesEnabled: JSON.parse(settings.gamesEnabled)
+            gamesEnabled: JSON.parse(settings.gamesEnabled),
+            marqueeText: settings.marqueeText ?? "",
+            marqueeSpeed: settings.marqueeSpeed ?? 25
         });
     } catch (error) {
         console.error("Error fetching system settings:", error);
@@ -51,7 +53,7 @@ export async function PUT(request: Request) {
         }
 
         const body = await request.json();
-        const { bonusDeductionPct, referralBonusNewUser, referralBonusReferrer, gamesEnabled } = body;
+        const { bonusDeductionPct, referralBonusNewUser, referralBonusReferrer, gamesEnabled, marqueeText, marqueeSpeed } = body;
 
         let settings = await prisma.systemSettings.findFirst();
 
@@ -62,7 +64,9 @@ export async function PUT(request: Request) {
                     bonusDeductionPct: bonusDeductionPct !== undefined ? Number(bonusDeductionPct) : settings.bonusDeductionPct,
                     referralBonusNewUser: referralBonusNewUser !== undefined ? Number(referralBonusNewUser) : settings.referralBonusNewUser,
                     referralBonusReferrer: referralBonusReferrer !== undefined ? Number(referralBonusReferrer) : settings.referralBonusReferrer,
-                    gamesEnabled: gamesEnabled ? JSON.stringify(gamesEnabled) : settings.gamesEnabled
+                    gamesEnabled: gamesEnabled ? JSON.stringify(gamesEnabled) : settings.gamesEnabled,
+                    marqueeText: marqueeText !== undefined ? String(marqueeText) : settings.marqueeText,
+                    marqueeSpeed: marqueeSpeed !== undefined ? Number(marqueeSpeed) : settings.marqueeSpeed
                 }
             });
         } else {
@@ -83,7 +87,9 @@ export async function PUT(request: Request) {
                 bonusDeductionPct: settings.bonusDeductionPct,
                 referralBonusNewUser: settings.referralBonusNewUser,
                 referralBonusReferrer: settings.referralBonusReferrer,
-                gamesEnabled: JSON.parse(settings.gamesEnabled)
+                gamesEnabled: JSON.parse(settings.gamesEnabled),
+                marqueeText: settings.marqueeText ?? "",
+                marqueeSpeed: settings.marqueeSpeed ?? 25
             }
         });
 

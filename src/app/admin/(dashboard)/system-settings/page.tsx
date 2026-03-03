@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Save, RefreshCw, AlertCircle, Settings, SlidersHorizontal, ToggleRight, Users } from "lucide-react";
+import { Save, RefreshCw, AlertCircle, Settings, SlidersHorizontal, ToggleRight, Users, MessageSquareText } from "lucide-react";
 
 interface GamesEnabled {
     [key: string]: boolean;
@@ -11,6 +11,8 @@ export default function SystemSettingsPage() {
     const [bonusDeductionPct, setBonusDeductionPct] = useState<number>(20);
     const [referralBonusNewUser, setReferralBonusNewUser] = useState<number>(50);
     const [referralBonusReferrer, setReferralBonusReferrer] = useState<number>(100);
+    const [marqueeText, setMarqueeText] = useState<string>("");
+    const [marqueeSpeed, setMarqueeSpeed] = useState<number>(25);
     const [gamesEnabled, setGamesEnabled] = useState<GamesEnabled>({
         spin: true,
         roulette: true,
@@ -39,6 +41,9 @@ export default function SystemSettingsPage() {
             setBonusDeductionPct(data.bonusDeductionPct);
             if (data.referralBonusNewUser !== undefined) setReferralBonusNewUser(data.referralBonusNewUser);
             if (data.referralBonusReferrer !== undefined) setReferralBonusReferrer(data.referralBonusReferrer);
+            if (data.marqueeText !== undefined) setMarqueeText(data.marqueeText);
+            if (data.marqueeSpeed !== undefined) setMarqueeSpeed(data.marqueeSpeed);
+            if (data.marqueeSpeed !== undefined) setMarqueeSpeed(data.marqueeSpeed);
             if (data.gamesEnabled) {
                 setGamesEnabled(data.gamesEnabled);
             }
@@ -56,7 +61,7 @@ export default function SystemSettingsPage() {
             const res = await fetch("/api/admin/system-settings", {
                 method: "PUT",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ bonusDeductionPct, referralBonusNewUser, referralBonusReferrer, gamesEnabled }),
+                body: JSON.stringify({ bonusDeductionPct, referralBonusNewUser, referralBonusReferrer, gamesEnabled, marqueeText, marqueeSpeed }),
             });
 
             if (!res.ok) throw new Error("Failed to save settings");
@@ -233,7 +238,49 @@ export default function SystemSettingsPage() {
                 </div>
 
             </div>
+
+            {/* Marquee Settings */}
+            <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden p-6">
+                <h2 className="text-xl font-semibold text-gray-200 mb-4 flex items-center gap-2">
+                    <MessageSquareText className="w-5 h-5 text-gray-400" />
+                    Info Banner (Marquee)
+                </h2>
+                <p className="text-gray-400 text-sm mb-6">
+                    Set the scrolling text that appears at the top of the client application. Leave empty to hide the banner.
+                </p>
+
+                <div className="space-y-4">
+                    <div className="space-y-2">
+                        <label className="text-sm font-medium text-gray-300">
+                            Scroll Speed ({marqueeSpeed}s)
+                        </label>
+                        <input
+                            type="range"
+                            min="5"
+                            max="60"
+                            value={marqueeSpeed}
+                            onChange={(e) => setMarqueeSpeed(Number(e.target.value))}
+                            className="w-full h-2 bg-gray-800 rounded-lg appearance-none cursor-pointer accent-blue-500"
+                        />
+                        <div className="flex justify-between text-xs text-gray-500 font-mono mt-1">
+                            <span>Fast (5s)</span>
+                            <span>Slow (60s)</span>
+                        </div>
+                    </div>
+
+                    <div className="space-y-2">
+                        <label className="text-sm font-medium text-gray-300">
+                            Banner Text
+                        </label>
+                        <textarea
+                            value={marqueeText}
+                            onChange={(e) => setMarqueeText(e.target.value)}
+                            placeholder="e.g. Welcome! Enjoy a 50% bonus on your first deposit..."
+                            className="w-full bg-gray-950 border border-gray-800 rounded-lg p-3 text-white focus:outline-none focus:border-blue-500 transition-colors min-h-[100px] resize-y"
+                        />
+                    </div>
+                </div>
+            </div>
         </div>
     );
 }
-
