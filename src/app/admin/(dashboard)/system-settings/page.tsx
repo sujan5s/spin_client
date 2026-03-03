@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Save, RefreshCw, AlertCircle, Settings, SlidersHorizontal, ToggleRight, ToggleLeft } from "lucide-react";
+import { Save, RefreshCw, AlertCircle, Settings, SlidersHorizontal, ToggleRight, Users } from "lucide-react";
 
 interface GamesEnabled {
     [key: string]: boolean;
@@ -9,6 +9,8 @@ interface GamesEnabled {
 
 export default function SystemSettingsPage() {
     const [bonusDeductionPct, setBonusDeductionPct] = useState<number>(20);
+    const [referralBonusNewUser, setReferralBonusNewUser] = useState<number>(50);
+    const [referralBonusReferrer, setReferralBonusReferrer] = useState<number>(100);
     const [gamesEnabled, setGamesEnabled] = useState<GamesEnabled>({
         spin: true,
         roulette: true,
@@ -35,6 +37,8 @@ export default function SystemSettingsPage() {
             if (!res.ok) throw new Error("Failed to fetch settings");
             const data = await res.json();
             setBonusDeductionPct(data.bonusDeductionPct);
+            if (data.referralBonusNewUser !== undefined) setReferralBonusNewUser(data.referralBonusNewUser);
+            if (data.referralBonusReferrer !== undefined) setReferralBonusReferrer(data.referralBonusReferrer);
             if (data.gamesEnabled) {
                 setGamesEnabled(data.gamesEnabled);
             }
@@ -52,7 +56,7 @@ export default function SystemSettingsPage() {
             const res = await fetch("/api/admin/system-settings", {
                 method: "PUT",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ bonusDeductionPct, gamesEnabled }),
+                body: JSON.stringify({ bonusDeductionPct, referralBonusNewUser, referralBonusReferrer, gamesEnabled }),
             });
 
             if (!res.ok) throw new Error("Failed to save settings");
@@ -152,6 +156,53 @@ export default function SystemSettingsPage() {
                             <p className="text-sm text-blue-300">
                                 <strong>Current Rule:</strong> When a user plays a game, <strong className="text-white">{bonusDeductionPct}%</strong> is drawn from their Bonus Balance (if sufficient) and <strong className="text-white">{100 - bonusDeductionPct}%</strong> is drawn from their Main Balance.
                             </p>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Referral System Settings */}
+                <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden p-6">
+                    <h2 className="text-xl font-semibold text-gray-200 mb-4 flex items-center gap-2">
+                        <Users className="w-5 h-5 text-gray-400" />
+                        Referral System Limits
+                    </h2>
+                    <p className="text-gray-400 text-sm mb-6">
+                        Configure the bonus amounts awarded when a new user signs up using a referral code. Both the new user and the referrer receive these rewards instantly.
+                    </p>
+
+                    <div className="flex flex-col gap-5">
+                        <div className="space-y-2">
+                            <label className="text-sm font-medium text-gray-300">
+                                New User Bonus (Signee)
+                            </label>
+                            <div className="relative">
+                                <span className="absolute left-3 top-2.5 text-gray-500 font-bold">₹</span>
+                                <input
+                                    type="number"
+                                    min="0"
+                                    value={referralBonusNewUser}
+                                    onChange={(e) => setReferralBonusNewUser(Number(e.target.value))}
+                                    className="w-full bg-gray-950 border border-gray-800 rounded-lg py-2 pl-8 pr-4 text-white focus:outline-none focus:border-blue-500 transition-colors"
+                                />
+                            </div>
+                            <p className="text-xs text-gray-500">Amount credited to the new user upon signup.</p>
+                        </div>
+
+                        <div className="space-y-2">
+                            <label className="text-sm font-medium text-gray-300">
+                                Referrer Bonus (Owner)
+                            </label>
+                            <div className="relative">
+                                <span className="absolute left-3 top-2.5 text-gray-500 font-bold">₹</span>
+                                <input
+                                    type="number"
+                                    min="0"
+                                    value={referralBonusReferrer}
+                                    onChange={(e) => setReferralBonusReferrer(Number(e.target.value))}
+                                    className="w-full bg-gray-950 border border-gray-800 rounded-lg py-2 pl-8 pr-4 text-white focus:outline-none focus:border-blue-500 transition-colors"
+                                />
+                            </div>
+                            <p className="text-xs text-gray-500">Amount credited to the user whose code was used.</p>
                         </div>
                     </div>
                 </div>

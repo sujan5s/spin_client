@@ -31,6 +31,8 @@ export async function GET(request: Request) {
         return NextResponse.json({
             id: settings.id,
             bonusDeductionPct: settings.bonusDeductionPct,
+            referralBonusNewUser: settings.referralBonusNewUser,
+            referralBonusReferrer: settings.referralBonusReferrer,
             gamesEnabled: JSON.parse(settings.gamesEnabled)
         });
     } catch (error) {
@@ -49,7 +51,7 @@ export async function PUT(request: Request) {
         }
 
         const body = await request.json();
-        const { bonusDeductionPct, gamesEnabled } = body;
+        const { bonusDeductionPct, referralBonusNewUser, referralBonusReferrer, gamesEnabled } = body;
 
         let settings = await prisma.systemSettings.findFirst();
 
@@ -58,6 +60,8 @@ export async function PUT(request: Request) {
                 where: { id: settings.id },
                 data: {
                     bonusDeductionPct: bonusDeductionPct !== undefined ? Number(bonusDeductionPct) : settings.bonusDeductionPct,
+                    referralBonusNewUser: referralBonusNewUser !== undefined ? Number(referralBonusNewUser) : settings.referralBonusNewUser,
+                    referralBonusReferrer: referralBonusReferrer !== undefined ? Number(referralBonusReferrer) : settings.referralBonusReferrer,
                     gamesEnabled: gamesEnabled ? JSON.stringify(gamesEnabled) : settings.gamesEnabled
                 }
             });
@@ -65,6 +69,8 @@ export async function PUT(request: Request) {
             settings = await prisma.systemSettings.create({
                 data: {
                     bonusDeductionPct: bonusDeductionPct !== undefined ? Number(bonusDeductionPct) : 20,
+                    referralBonusNewUser: referralBonusNewUser !== undefined ? Number(referralBonusNewUser) : 50,
+                    referralBonusReferrer: referralBonusReferrer !== undefined ? Number(referralBonusReferrer) : 100,
                     gamesEnabled: gamesEnabled ? JSON.stringify(gamesEnabled) : DEFAULT_GAMES_ENABLED
                 }
             });
@@ -75,6 +81,8 @@ export async function PUT(request: Request) {
             settings: {
                 id: settings.id,
                 bonusDeductionPct: settings.bonusDeductionPct,
+                referralBonusNewUser: settings.referralBonusNewUser,
+                referralBonusReferrer: settings.referralBonusReferrer,
                 gamesEnabled: JSON.parse(settings.gamesEnabled)
             }
         });

@@ -7,19 +7,20 @@ const prisma = new PrismaClient();
 export async function GET(request: Request) {
     const cookieStore = await cookies();
     const token = cookieStore.get("admin_token");
-    // matches existing admin auth pattern
-
+    if (!token) {
+        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
     try {
         const { searchParams } = new URL(request.url);
         const page = parseInt(searchParams.get("page") ?? "1");
         const limit = 50;
         const search = searchParams.get("search") ?? "";
 
-        const where = search
+        const where: any = search
             ? {
                 OR: [
-                    { email: { contains: search, mode: "insensitive" as const } },
-                    { user: { name: { contains: search, mode: "insensitive" as const } } },
+                    { email: { contains: search, mode: "insensitive" } },
+                    { user: { name: { contains: search, mode: "insensitive" } } },
                 ],
             }
             : {};
