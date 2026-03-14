@@ -42,8 +42,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             if (res.ok) {
                 const data = await res.json();
                 setUser(data.user);
+                // Restore token to localStorage so SocketContext can use it
+                if (data.token) {
+                    localStorage.setItem('authToken', data.token);
+                }
             } else {
                 setUser(null);
+                localStorage.removeItem('authToken');
             }
         } catch (error) {
             console.error("Auth check failed", error);

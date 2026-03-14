@@ -47,7 +47,10 @@ export const SocketProvider = ({ children }: { children: ReactNode }) => {
     useEffect(() => {
         const token = localStorage.getItem('authToken');
 
+        console.log("SocketContext: user =", user?.email ?? "null", "| token =", token ? "exists" : "missing");
+
         if (!user || !token) {
+            console.log("SocketContext: Skipping connection — user or token missing");
             if (socket) {
                 socket.disconnect();
                 setSocket(null);
@@ -57,6 +60,7 @@ export const SocketProvider = ({ children }: { children: ReactNode }) => {
         }
 
         const SOCKET_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
+        console.log("SocketContext: Connecting to", SOCKET_URL);
 
         const socketInstance = io(SOCKET_URL, {
             auth: {

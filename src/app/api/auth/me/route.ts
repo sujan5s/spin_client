@@ -55,7 +55,7 @@ export async function GET(request: Request) {
             // non-fatal
         }
 
-        return NextResponse.json({ user: data.user }, { status: 200 });
+        return NextResponse.json({ user: data.user, token: token.value }, { status: 200 });
     } catch (error: any) {
         console.error("Session check error:", error);
         return NextResponse.json(
