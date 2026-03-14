@@ -1,9 +1,10 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useWallet } from "@/context/WalletContext";
 import { useSystemSettings } from "@/context/SystemSettingsContext";
-import { Bomb, Diamond, Coins, Loader2, Trophy } from "lucide-react";
+import { useSocket } from "@/context/SocketContext";
+import { Bomb, Diamond, Coins, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import confetti from "canvas-confetti";
@@ -18,133 +19,61 @@ interface GameState {
 }
 
 export default function MinesPage() {
-    const { balance, setBalance, setBonusBalance, refreshTransactions } = useWallet();
+    const { balance, refreshTransactions } = useWallet();
     const { gamesEnabled } = useSystemSettings();
+    const { socket, isConnected } = useSocket();
 
-    // Inputs
     const [betAmount, setBetAmount] = useState("10");
     const [minesCount, setMinesCount] = useState(3);
-
-    // Game State
     const [game, setGame] = useState<GameState | null>(null);
     const [isLoading, setIsLoading] = useState(false);
-    const [actionLoading, setActionLoading] = useState(false); // Revealing/Cashing out
+    const [actionLoading, setActionLoading] = useState(false);
 
     // Sound effects (optional, can add later)
 
-    const handleStartGame = async () => {
+    const handleStartGame = () => {
         const bet = parseFloat(betAmount);
-        if (!bet || bet < 10 || bet > balance) {
-            toast.error(bet < 10 ? "Minimum bet amount is 10" : "Invalid bet amount");
-            return;
-        }
+        if (!bet || bet < 10 || bet > balance) { toast.error(bet < 10 ? "Minimum bet amount is 10" : "Invalid bet amount"); return; }
+        if (!isConnected || !socket) { toast.error("No server connection."); return; }
 
         setIsLoading(true);
-        try {
-            const res = await fetch("/api/game/mines/create", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ betAmount: bet, minesCount })
-            });
-            const data = await res.json();
-
-            if (!res.ok) throw new Error(data.error);
-
-            setGame({
-                id: data.game.id,
-                status: "active",
-                multiplier: 1.0,
-                amount: bet, // Initially just the bet back (technically 0 profit until first move but Stake shows base)
-                mines: [],
-                revealed: []
-            });
-
-            if (data.balance !== undefined) setBalance(data.balance);
-            if (data.bonusBalance !== undefined) setBonusBalance(data.bonusBalance);
-            refreshTransactions();
-
-        } catch (error: any) {
-            toast.error(error.message);
-        } finally {
+        socket.emit('mines:create', { betAmount: bet, minesCount }, (data: any) => {
             setIsLoading(false);
-        }
-    };
-
-    const handleReveal = async (index: number) => {
-        if (!game || game.status !== "active" || actionLoading) return;
-        if (game.revealed.includes(index)) return;
-
-        setActionLoading(true);
-        try {
-            const res = await fetch("/api/game/mines/reveal", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ gameId: game.id, tileIndex: index })
-            });
-            const data = await res.json();
-
-            if (!res.ok) throw new Error(data.error);
-
-            if (data.status === "lost") {
-                // Game Over
-                setGame(prev => prev ? {
-                    ...prev,
-                    status: "lost",
-                    mines: data.mines,
-                    revealed: data.revealed // Should include the bomb just hit
-                } : null);
-                // toast.error("Boom! You hit a mine.");
-            } else {
-                // Safe
-                setGame(prev => prev ? {
-                    ...prev,
-                    status: "active",
-                    multiplier: data.multiplier,
-                    amount: data.currentPayout,
-                    revealed: data.revealed
-                } : null);
-                // Audio success?
-            }
-
-        } catch (error: any) {
-            toast.error(error.message);
-        } finally {
-            setActionLoading(false);
-        }
-    };
-
-    const handleCashout = async () => {
-        if (!game || game.status !== "active" || actionLoading) return;
-
-        setActionLoading(true);
-        try {
-            const res = await fetch("/api/game/mines/cashout", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ gameId: game.id })
-            });
-            const data = await res.json();
-
-            if (!res.ok) throw new Error(data.error);
-
-            setGame(prev => prev ? {
-                ...prev,
-                status: "cashed_out",
-                mines: data.mines
-            } : null);
-
-            if (data.balance !== undefined) setBalance(data.balance);
-            if (data.bonusBalance !== undefined) setBonusBalance(data.bonusBalance);
+            if (data.error) { toast.error(data.error); return; }
+            setGame({ id: data.game.id, status: "active", multiplier: 1.0, amount: bet, mines: [], revealed: [] });
             refreshTransactions();
+        });
+    };
 
+    const handleReveal = (index: number) => {
+        if (!game || game.status !== "active" || actionLoading || game.revealed.includes(index)) return;
+        if (!isConnected || !socket) return;
+
+        setActionLoading(true);
+        socket.emit('mines:reveal', { gameId: game.id, tileIndex: index }, (data: any) => {
+            setActionLoading(false);
+            if (data.error) { toast.error(data.error); return; }
+            if (data.status === "lost") {
+                setGame(prev => prev ? { ...prev, status: "lost", mines: data.mines, revealed: data.revealed ?? [...prev.revealed, index] } : null);
+            } else {
+                setGame(prev => prev ? { ...prev, status: "active", multiplier: data.multiplier, amount: data.currentPayout, revealed: data.revealed } : null);
+            }
+        });
+    };
+
+    const handleCashout = () => {
+        if (!game || game.status !== "active" || actionLoading) return;
+        if (!isConnected || !socket) return;
+
+        setActionLoading(true);
+        socket.emit('mines:cashout', { gameId: game.id }, (data: any) => {
+            setActionLoading(false);
+            if (data.error) { toast.error(data.error); return; }
+            setGame(prev => prev ? { ...prev, status: "cashed_out", mines: data.mines, amount: data.payout } : null);
+            refreshTransactions();
             toast.success(`Cashed out $${data.payout.toFixed(2)}!`);
             confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
-
-        } catch (error: any) {
-            toast.error(error.message);
-        } finally {
-            setActionLoading(false);
-        }
+        });
     };
 
     const handleQuickPick = () => {

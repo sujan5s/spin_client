@@ -71,6 +71,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             }
 
             const data = await res.json();
+            localStorage.setItem('authToken', data.token);
             setUser(data.user);
             router.push("/home");
         } catch (error) {
@@ -93,6 +94,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             }
 
             const data = await res.json();
+            localStorage.setItem('authToken', data.token);
             setUser(data.user);
             router.push("/home");
         } catch (error) {
@@ -116,6 +118,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             }
 
             const data = await res.json();
+            localStorage.setItem('authToken', data.token);
             setUser(data.user);
             router.push("/home");
         } catch (error) {
@@ -127,6 +130,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const logout = async () => {
         try {
             await fetch("/api/auth/logout", { method: "POST" });
+            localStorage.removeItem('authToken');
             setUser(null);
             router.push("/");
         } catch (error) {

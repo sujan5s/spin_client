@@ -1,5 +1,6 @@
 generator client {
-  provider = "prisma-client-js"
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "rhel-openssl-3.0.x"]
 }
 
 datasource db {
@@ -9,32 +10,32 @@ datasource db {
 }
 
 model User {
-  id                      Int                      @id @default(autoincrement())
-  email                   String                   @unique
-  name                    String?
-  password                String?
-  googleId                String?                  @unique
-  balance                 Float                    @default(0)
-  bonusBalance            Float                    @default(0)
-  kycStatus               String                   @default("UNVERIFIED") // UNVERIFIED, PENDING, VERIFIED, REJECTED
-  kycDocumentUrl          String?
-  dailySpinCount          Int                      @default(0)
-  lastSpinDate            DateTime                 @default(now())
-  createdAt               DateTime                 @default(now())
-  updatedAt               DateTime                 @updatedAt
-  referralCode            String?                  @unique
-  referredById            Int?
-  dragonTowerGames        DragonTowerGame[]
-  minesGames              MinesGame[]
-  notifications           Notification[]
-  shuffleGames            ShuffleGame[]
-  tickets                 Ticket[]
-  transactions            Transaction[]
-  referredBy              User?                    @relation("Referrals", fields: [referredById], references: [id])
-  referrals               User[]                   @relation("Referrals")
-  withdrawalRequests      WithdrawalRequest[]      @relation("UserWithdrawalRequests")
-  loginLogs               LoginLog[]               @relation("UserLoginLogs")
-  accountDeletionRequests AccountDeletionRequest[] @relation("UserDeletionRequests")
+  id                 Int                 @id @default(autoincrement())
+  email              String              @unique
+  name               String?
+  password           String?
+  googleId           String?             @unique
+  balance            Float               @default(0)
+  bonusBalance       Float               @default(0)
+  kycStatus          String              @default("UNVERIFIED") // UNVERIFIED, PENDING, VERIFIED, REJECTED
+  kycDocumentUrl     String?
+  dailySpinCount     Int                 @default(0)
+  lastSpinDate       DateTime            @default(now())
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+  referralCode       String?             @unique
+  referredById       Int?
+  dragonTowerGames   DragonTowerGame[]
+  minesGames         MinesGame[]
+  notifications      Notification[]
+  shuffleGames       ShuffleGame[]
+  tickets            Ticket[]
+  transactions       Transaction[]
+  referredBy         User?               @relation("Referrals", fields: [referredById], references: [id])
+  referrals          User[]              @relation("Referrals")
+  withdrawalRequests WithdrawalRequest[] @relation("UserWithdrawalRequests")
+  loginLogs          LoginLog[]          @relation("UserLoginLogs")
+  deletionRequests   AccountDeletionRequest[] @relation("UserDeletionRequests")
 }
 
 model OtpVerification {
@@ -128,6 +129,19 @@ model SlotsConfiguration {
   updatedAt DateTime @updatedAt
 }
 
+model ShuffleConfiguration {
+  id         Int      @id @default(autoincrement())
+  multiplier Float    @default(2.90)
+  minBet     Float    @default(10)
+  updatedAt  DateTime @updatedAt
+}
+
+model RouletteConfiguration {
+  id        Int      @id @default(autoincrement())
+  settings  String
+  updatedAt DateTime @updatedAt
+}
+
 model ShuffleGame {
   id          Int      @id @default(autoincrement())
   userId      Int
@@ -215,7 +229,7 @@ model AccountDeletionRequest {
   id        Int      @id @default(autoincrement())
   userId    Int
   reason    String
-  status    String   @default("PENDING") // PENDING, APPROVED, REJECTED
+  status    String   @default("PENDING")
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   user      User     @relation("UserDeletionRequests", fields: [userId], references: [id])

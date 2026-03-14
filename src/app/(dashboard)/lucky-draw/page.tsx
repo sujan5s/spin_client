@@ -6,7 +6,7 @@ import LuckyDrawPopup from "@/components/lucky-draw/LuckyDrawPopup";
 import { toast } from "sonner";
 import { TokenIcon } from "@/components/TokenIcon";
 import { useWallet } from "@/context/WalletContext";
-import { useAuth } from "@/context/AuthContext";
+import { useSocket } from "@/context/SocketContext";
 import { useSystemSettings } from "@/context/SystemSettingsContext";
 
 interface TicketData {
@@ -20,26 +20,21 @@ interface TicketData {
 const TICKET_PRICES = [10, 50, 200, 500];
 
 export default function LuckyDrawPage() {
-    const { balance, setBalance, setBonusBalance } = useWallet();
+    const { balance, refreshTransactions } = useWallet();
     const { gamesEnabled } = useSystemSettings();
+    const { socket, isConnected } = useSocket();
     const [tickets, setTickets] = useState<TicketData[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [purchaseLoading, setPurchaseLoading] = useState<number | null>(null); // price of ticket being bought
     const [error, setError] = useState<string | null>(null);
     const [popupData, setPopupData] = useState<{ isOpen: boolean, price: number } | null>(null);
 
-    const fetchTickets = async () => {
-        try {
-            const res = await fetch("/api/lucky-draw/tickets");
-            if (res.ok) {
-                const data = await res.json();
-                setTickets(data.tickets);
-            }
-        } catch (error) {
-            console.error("Failed to fetch tickets", error);
-        } finally {
+    const fetchTickets = () => {
+        if (!socket || !isConnected) return;
+        socket.emit('luckydraw:get_tickets', {}, (data: any) => {
+            if (data.tickets) setTickets(data.tickets);
             setIsLoading(false);
-        }
+        });
     };
 
     useEffect(() => {
@@ -52,43 +47,23 @@ export default function LuckyDrawPage() {
             setTimeout(() => setError(null), 3000);
             return;
         }
+        if (!socket || !isConnected) return;
 
         setPurchaseLoading(price);
         setError(null);
 
-        try {
-            const res = await fetch("/api/lucky-draw/purchase", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ amount: price }),
-            });
-
-            const data = await res.json();
-
-            if (res.ok) {
-                // Update specific local balances context instantly
-                setBalance(data.balance);
-                if (data.bonusBalance !== undefined) setBonusBalance(data.bonusBalance);
-
-                await fetchTickets();
-
-                // Show Popup
-                setPopupData({ isOpen: true, price });
-
-                // Show Toast
-                toast.success("Ticket Purchased Successfully!");
-            } else {
-                setError(data.error || "Purchase failed");
-                toast.error(data.error || "Purchase failed");
-            }
-        } catch (error) {
-            console.error("Purchase error:", error);
-            const msg = error instanceof Error ? error.message : "Something went wrong";
-            setError(msg);
-            toast.error(msg);
-        } finally {
+        socket.emit('luckydraw:purchase', { amount: price }, (data: any) => {
             setPurchaseLoading(null);
-        }
+            if (!data.error) {
+                fetchTickets();
+                setPopupData({ isOpen: true, price });
+                toast.success("Ticket Purchased Successfully!");
+                refreshTransactions();
+            } else {
+                setError(data.error);
+                toast.error(data.error);
+            }
+        });
     };
 
     const activeTickets = tickets.filter(t => t.status === "active");

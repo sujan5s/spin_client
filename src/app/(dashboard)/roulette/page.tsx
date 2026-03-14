@@ -1,16 +1,18 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef } from "react";
 import { useWallet } from "@/context/WalletContext";
 import { useSystemSettings } from "@/context/SystemSettingsContext";
-import { Loader2, RotateCcw, Coins, Trophy } from "lucide-react";
+import { useSocket } from "@/context/SocketContext";
+import { Loader2, RotateCcw, Coins } from "lucide-react";
 import { cn } from "@/lib/utils";
 import RouletteWheel from "@/components/roulette/RouletteWheel";
 import BettingTable from "@/components/roulette/BettingTable";
 
 export default function RoulettePage() {
-    const { balance, setBalance, setBonusBalance, refreshTransactions } = useWallet();
+    const { balance, refreshTransactions } = useWallet();
     const { gamesEnabled } = useSystemSettings();
+    const { socket, isConnected } = useSocket();
     const [gameState, setGameState] = useState<"IDLE" | "SPINNING" | "RESULT">("IDLE");
     const [bets, setBets] = useState<{ [key: string]: number }>({});
     const [selectedChip, setSelectedChip] = useState<number>(1);
@@ -19,8 +21,8 @@ export default function RoulettePage() {
     const [history, setHistory] = useState<number[]>([]);
     const [error, setError] = useState<string | null>(null);
 
-    // Passed to Wheel to trigger animation
     const [targetNumber, setTargetNumber] = useState<number | null>(null);
+    const rouletteResultRef = useRef<any>(null);
 
     const CHIPS = [1, 5, 10, 25, 50, 100];
 
@@ -52,90 +54,44 @@ export default function RoulettePage() {
         if (gameState !== "SPINNING") setBets({});
     };
 
-    const spin = async () => {
+    const spin = () => {
         const totalBet = getTotalBet();
-        if (totalBet === 0 || totalBet > balance) {
-            setError("Invalid bet amount");
-            return;
-        }
+        if (totalBet === 0 || totalBet > balance) { setError("Invalid bet amount"); return; }
+        if (!isConnected || !socket) { setError("No server connection."); return; }
 
         setGameState("SPINNING");
-        setTargetNumber(null); // Reset target to prevent premature spinning to old number
+        setTargetNumber(null);
         setError(null);
         setWinAmount(0);
-        console.log("Spin started, bets:", bets);
 
-        try {
-            const res = await fetch("/api/game/roulette", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ bets })
-            });
-
-            const data = await res.json();
-
-            if (!res.ok) {
-                throw new Error(data.error || "Spin failed");
+        socket.emit('roulette:bet', { bets }, (data: any) => {
+            if (data.error) {
+                setError(data.error);
+                setGameState("IDLE");
+                return;
             }
-
-            // Start Wheel Animation
-            console.log("Spin result received:", data.result);
+            rouletteResultRef.current = data;
             setTargetNumber(data.result);
-
-            // Wait for animation (e.g., 8 seconds) - The Wheel component will call onComplete
-            // But we need to define the onComplete handler here
-
-            // Note: We'll pass the result data to a ref or state to access it after animation
-            window.rouletteResult = data;
-
-        } catch (err: any) {
-            console.error(err);
-            setError(err.message);
-            setGameState("IDLE");
-        }
+        });
     };
 
     const handleSpinComplete = () => {
-        // @ts-ignore
-        const data = window.rouletteResult;
+        const data = rouletteResultRef.current;
         if (!data) return;
 
-        // Delay showing result to let the ball settle visually
         setTimeout(() => {
             setGameState("RESULT");
             setPreviousResult(data.result);
             setWinAmount(data.winAmount);
-            setHistory(prev => [data.result, ...prev].slice(0, 10)); // Keep last 10
-
-            // Update Wallet
-            if (data.balance !== undefined) setBalance(data.balance);
-            if (data.bonusBalance !== undefined) setBonusBalance(data.bonusBalance);
+            setHistory(prev => [data.result, ...prev].slice(0, 10));
             refreshTransactions();
 
-            // Trigger Notification (Delayed)
-            setTimeout(async () => {
-                try {
-                    await fetch("/api/notifications", {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({
-                            title: data.winAmount > 0 ? "Roulette Win!" : "Roulette Loss",
-                            message: `Roulette Result: ${data.result}. Win: $${data.winAmount}`,
-                            type: data.winAmount > 0 ? "success" : "info"
-                        })
-                    });
-                } catch (e) {
-                    console.error("Failed to send notification", e);
-                }
-
+            setTimeout(() => {
                 setGameState("IDLE");
-                // Optional: Clear bets or keep them for re-bet?
-                // Casino standard: clear bets usually, or have "Rebet" button.
-                // We'll keep them on board but user needs to modify if they want?
-                // Let's clear for cleaner flow.
                 setBets({});
-            }, 6000); // 6s delay per user request
-        }, 1000); // 1s delay after animation stops
+                rouletteResultRef.current = null;
+            }, 6000);
+        }, 1000);
     };
 
     return (
@@ -271,11 +227,4 @@ export default function RoulettePage() {
             </div>
         </div>
     );
-}
-
-// Helper to keep TS happy with arbitrary window prop
-declare global {
-    interface Window {
-        rouletteResult: any;
-    }
 }

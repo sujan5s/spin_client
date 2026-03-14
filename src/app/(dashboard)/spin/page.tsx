@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useWallet } from "@/context/WalletContext";
 import { useSystemSettings } from "@/context/SystemSettingsContext";
+import { useSocket } from "@/context/SocketContext";
 import { AlertCircle, Trophy, History, Coins, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -17,8 +18,9 @@ interface SpinSegment {
 }
 
 export default function SpinPage() {
-    const { balance, setBalance, setBonusBalance, refreshTransactions } = useWallet();
+    const { balance, refreshTransactions } = useWallet();
     const { gamesEnabled } = useSystemSettings();
+    const { socket, isConnected, pauseBalanceUpdates, resumeBalanceUpdates } = useSocket();
     const [betAmount, setBetAmount] = useState<string>("");
     const [isSpinning, setIsSpinning] = useState(false);
     const [rotation, setRotation] = useState(0);
@@ -66,17 +68,14 @@ export default function SpinPage() {
 
     // Fetch Spin Status
     const fetchSpinStatus = async () => {
-        try {
-            const res = await fetch("/api/game/spin/status");
-            const data = await res.json();
+        if (!socket || !isConnected) return;
+        socket.emit('spin:status', {}, (data: any) => {
             if (!data.error) {
                 setSpinsUsed(data.spinsUsed);
                 setMaxSpins(data.maxSpins);
                 setTimeUntilReset(data.timeUntilReset);
             }
-        } catch (e) {
-            console.error("Failed to fetch spin status", e);
-        }
+        });
     };
 
     useEffect(() => {
@@ -115,29 +114,22 @@ export default function SpinPage() {
     const handleSpin = async () => {
         const bet = parseFloat(betAmount);
         if (!bet || bet < 10 || bet > balance) return;
+        if (!socket || !isConnected) return;
 
         setIsSpinning(true);
         setResult(null);
         setError(null);
+        pauseBalanceUpdates();
 
-        try {
-            const response = await fetch("/api/game/spin", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ betAmount: bet }),
-            });
-
-            const data = await response.json();
-
-            if (!response.ok) {
-                throw new Error(data.error || "Failed to spin");
+        socket.emit('spin:play', { betAmount: bet }, (data: any) => {
+            if (data.error) {
+                setIsSpinning(false);
+                setError(data.error);
+                resumeBalanceUpdates();
+                return;
             }
 
             const { segmentIndex, multiplier, winAmount } = data;
-
-            // Calculate rotation
-            // 0 degrees is top.
-            // Segment `i` is at `i * (360 / segments.length)` degrees.
             const segmentAngle = 360 / segments.length;
             const targetRotation = 360 - (segmentIndex * segmentAngle);
             const currentRotationMod = rotation % 360;
@@ -152,15 +144,10 @@ export default function SpinPage() {
             setTimeout(async () => {
                 setIsSpinning(false);
                 setResult({ multiplier, winAmount });
+                resumeBalanceUpdates();
 
-                // Update history
                 setHistory(prev => [{ multiplier, win: winAmount > 0 }, ...prev].slice(0, 5));
-
-                setBalance(data.balance);
-                if (data.bonusBalance !== undefined) {
-                    setBonusBalance(data.bonusBalance);
-                }
-                refreshTransactions(); // Update transaction history
+                refreshTransactions();
 
                 // Trigger Global Notification
                 try {
@@ -183,12 +170,7 @@ export default function SpinPage() {
                 setSpinsUsed(prev => prev + 1);
 
             }, 5000);
-
-        } catch (err: any) {
-            setIsSpinning(false);
-            setError(err.message);
-            console.error("Spin error:", err);
-        }
+        });
     };
 
     const setMaxBet = () => {

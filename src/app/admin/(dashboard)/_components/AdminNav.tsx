@@ -15,6 +15,7 @@ const NAV_ITEMS = [
     { name: "Lucky Draw", href: "/admin/lucky-draw", icon: Trophy },
     { name: "System Controls", href: "/admin/system-settings", icon: Settings },
     { name: "Spin Settings", href: "/admin/spin-settings", icon: Settings },
+    { name: "Roulette Settings", href: "/admin/roulette-settings", icon: Settings },
     { name: "Plinko Settings", href: "/admin/plinko-settings", icon: Settings },
     { name: "Mines Settings", href: "/admin/mines-settings", icon: Bomb },
     {
@@ -22,6 +23,7 @@ const NAV_ITEMS = [
         href: "/admin/slots-settings",
         icon: () => <div className="w-5 h-5 flex items-center justify-center font-bold border border-current rounded text-[10px]">7</div>
     },
+    { name: "Shuffle Settings", href: "/admin/shuffle-settings", icon: Settings },
     { name: "Dragon Tower Settings", href: "/admin/dragontower-settings", icon: Crown },
 ];
 

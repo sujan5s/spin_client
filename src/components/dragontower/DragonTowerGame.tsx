@@ -1,12 +1,12 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useWallet } from "@/context/WalletContext";
 import { useSystemSettings } from "@/context/SystemSettingsContext";
-import { motion, AnimatePresence } from "framer-motion";
+import { useSocket } from "@/context/SocketContext";
+import { motion } from "framer-motion";
 import { toast } from "sonner";
-import { Loader2, Flame, Ghost, Crown, Egg, Skull, Shield } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { Crown, Egg, Skull, Shield } from "lucide-react";
 
 // Types
 type Difficulty = "easy" | "medium" | "hard" | "expert" | "master";
@@ -18,29 +18,17 @@ type GameConfig = {
 };
 
 export default function DragonTowerGame() {
-    const { balance, updateBalance, setBalance, setBonusBalance, refreshTransactions } = useWallet();
+    const { balance, refreshTransactions } = useWallet();
     const { gamesEnabled } = useSystemSettings();
+    const { socket, isConnected } = useSocket();
     const [betAmount, setBetAmount] = useState<string>("10");
     const [difficulty, setDifficulty] = useState<Difficulty>("medium");
     const [gameState, setGameState] = useState<"idle" | "playing" | "game_over" | "won">("idle");
     const [gameId, setGameId] = useState<number | null>(null);
     const [currentRow, setCurrentRow] = useState<number>(0);
-    const [history, setHistory] = useState<any[]>([]); // Array of row results
+    const [history, setHistory] = useState<any[]>([]);
     const [config, setConfig] = useState<GameConfig | null>(null);
     const [loading, setLoading] = useState(false);
-    const [minBets, setMinBets] = useState<Record<string, number>>({
-        easy: 10, medium: 10, hard: 10, expert: 10, master: 10
-    });
-
-    useEffect(() => {
-        // Fetch Min Bets Config
-        fetch("/api/game/dragontower/config")
-            .then(res => res.json())
-            .then(data => {
-                if (data.minBets) setMinBets(data.minBets);
-            })
-            .catch(err => console.error("Failed to load config", err));
-    }, []);
 
     // Initial placeholder config for UI before game starts
     const INITIAL_ROWS = 9;
@@ -55,79 +43,44 @@ export default function DragonTowerGame() {
         }
     };
 
-    const handleStart = async () => {
-        const currentMinBet = minBets[difficulty];
+    const handleStart = () => {
         const bet = parseFloat(betAmount);
-
-        if (!bet || bet < currentMinBet || bet > balance) {
-            toast.error(bet < currentMinBet ? `Minimum bet for ${difficulty} is ${currentMinBet}` : "Insufficient funds");
-            return;
-        }
+        if (!bet || bet < 10 || bet > balance) { toast.error("Invalid bet"); return; }
+        if (!isConnected || !socket) { toast.error("No server connection."); return; }
 
         setLoading(true);
-        try {
-            updateBalance(-bet);
-
-            const res = await fetch("/api/game/dragontower/create", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ betAmount: bet, difficulty })
-            });
-
-            if (!res.ok) throw new Error("Failed to start");
-            const data = await res.json();
-
+        socket.emit('dragontower:create', { betAmount: bet, difficulty }, (data: any) => {
+            setLoading(false);
+            if (data.error) { toast.error(data.error); return; }
             setGameId(data.gameId);
             setConfig(data.config);
-            if (data.balance !== undefined) setBalance(data.balance);
-            if (data.bonusBalance !== undefined) setBonusBalance(data.bonusBalance);
-
             setGameState("playing");
             setCurrentRow(0);
-            setHistory(Array(data.config.rows).fill(null)); // Reset Grid
-        } catch (e) {
-            toast.error("Error starting game");
-        } finally {
-            setLoading(false);
-        }
+            setHistory(Array(data.config.rows).fill(null));
+        });
     };
 
-    const handleSelectTile = async (index: number) => {
+    const handleSelectTile = (index: number) => {
         if (gameState !== "playing" || !gameId) return;
+        if (!isConnected || !socket) return;
 
-        try {
-            const res = await fetch("/api/game/dragontower/reveal", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ gameId, tileIndex: index })
-            });
+        socket.emit('dragontower:reveal', { gameId, tileIndex: index }, (data: any) => {
+            if (data.error) { toast.error(data.error); return; }
 
-            const data = await res.json();
-
-            // Update History Grid
             setHistory(prev => {
                 const newHist = [...prev];
-                // Store the full row content and the user's pick
-                newHist[currentRow] = {
-                    content: data.rowContent, // [1, 0, 1] etc
-                    picked: index
-                };
+                newHist[currentRow] = { content: data.rowContent, picked: index };
                 return newHist;
             });
 
             if (data.status === "lost") {
                 setGameState("game_over");
                 toast.error("You hit a mine!");
-                // If lost, we might want to show the full tower?
-                // API returned allRows in data.allRows if lost
                 if (data.allRows) {
-                    // Fill the rest of the history to reveal everything
                     setHistory(prev => {
                         const newHist = [...prev];
                         data.allRows.forEach((row: number[], i: number) => {
-                            if (i >= currentRow) {
-                                newHist[i] = { content: row, picked: i === currentRow ? index : -1 };
-                            }
+                            if (i >= currentRow) newHist[i] = { content: row, picked: i === currentRow ? index : -1 };
                         });
                         return newHist;
                     });
@@ -135,38 +88,23 @@ export default function DragonTowerGame() {
             } else if (data.status === "won") {
                 setGameState("won");
                 toast.success(`Tower Conquered! Won $${data.winAmount.toFixed(2)}`);
-                updateBalance(data.winAmount);
                 refreshTransactions();
             } else {
-                // Continue
                 setCurrentRow(prev => prev + 1);
             }
-
-        } catch (e) {
-            toast.error("Error revealing tile");
-        }
+        });
     };
 
-    const handleCashout = async () => {
+    const handleCashout = () => {
         if (!gameId || gameState !== "playing") return;
+        if (!isConnected || !socket) return;
 
-        try {
-            const res = await fetch("/api/game/dragontower/cashout", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ gameId })
-            });
-            const data = await res.json();
-
-            if (data.status === "cashed_out") {
-                toast.success(`Cashed out $${data.winAmount.toFixed(2)}`);
-                updateBalance(data.winAmount);
-                setGameState("game_over");
-                refreshTransactions();
-            }
-        } catch (e) {
-            toast.error("Error cashing out");
-        }
+        socket.emit('dragontower:cashout', { gameId }, (data: any) => {
+            if (data.error) { toast.error(data.error); return; }
+            toast.success(`Cashed out $${data.winAmount.toFixed(2)}`);
+            setGameState("game_over");
+            refreshTransactions();
+        });
     };
 
     // Render Setup

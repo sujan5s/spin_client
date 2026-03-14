@@ -3,9 +3,10 @@
 import { useState, useEffect } from "react";
 import { useWallet } from "@/context/WalletContext";
 import { useSystemSettings } from "@/context/SystemSettingsContext";
+import { useSocket } from "@/context/SocketContext";
 import { cn } from "@/lib/utils";
 import { getSymbolComponent } from "./SlotsSymbols";
-import { Trophy, Info, Loader2, Coins } from "lucide-react";
+import { Trophy, Loader2, Coins } from "lucide-react";
 import { toast } from "sonner";
 
 const REEL_COUNT = 5;
@@ -20,8 +21,9 @@ const useSound = () => {
 };
 
 export default function SlotsGame() {
-    const { balance, setBalance, setBonusBalance, updateBalance, refreshTransactions } = useWallet();
+    const { balance, updateBalance, refreshTransactions } = useWallet();
     const { gamesEnabled } = useSystemSettings();
+    const { socket, isConnected } = useSocket();
     const [betAmount, setBetAmount] = useState<string>("10");
     const [isSpinning, setIsSpinning] = useState(false);
     const [reels, setReels] = useState<string[]>(Array(REEL_COUNT).fill('7'));
@@ -29,55 +31,31 @@ export default function SlotsGame() {
 
     const { playSpin, playWin } = useSound();
 
-    const handleSpin = async () => {
+    const handleSpin = () => {
         const bet = parseFloat(betAmount);
-        if (!bet || bet <= 0 || bet > balance || isSpinning) {
-            if (bet > balance) toast.error("Insufficient funds");
-            return;
-        }
+        if (!bet || bet <= 0 || bet > balance || isSpinning) { if (bet > balance) toast.error("Insufficient funds"); return; }
+        if (!isConnected || !socket) { toast.error("No server connection."); return; }
 
         setIsSpinning(true);
         setWinData(null);
+        updateBalance(-bet);
         playSpin();
 
-        try {
-            updateBalance(-bet);
-            // refreshTransactions(); // Wait for result to refresh history
-
-            const res = await fetch("/api/game/slots", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ betAmount: bet })
-            });
-
-            if (!res.ok) throw new Error("Failed to spin");
-            const data = await res.json();
-
-            // Delay visuals
-            setTimeout(() => {
-                if (data.reels) {
-                    setReels(data.reels);
-                }
-
+        socket.emit('slots:spin', { betAmount: bet }, (data: any) => {
+            if (data.error) {
                 setIsSpinning(false);
+                updateBalance(bet); // Refund
+                toast.error(data.error);
+                return;
+            }
 
-                // Sync balance from server (guarateed correctness)
-                if (data.balance !== undefined) setBalance(data.balance);
-                if (data.bonusBalance !== undefined) setBonusBalance(data.bonusBalance);
-
+            setTimeout(() => {
+                if (data.reels) setReels(data.reels);
+                setIsSpinning(false);
                 refreshTransactions();
-
-                // Win logic after stop
-                setTimeout(() => {
-                    handleWin(data, bet);
-                }, 500); // Quick check after stop
-            }, 2000); // 2s spin duration
-
-        } catch (error) {
-            console.error(error);
-            setIsSpinning(false);
-            toast.error("Error processing spin. Please try again.");
-        }
+                setTimeout(() => handleWin(data, bet), 500);
+            }, 2000);
+        });
     };
 
     const handleWin = (data: any, bet: number) => {

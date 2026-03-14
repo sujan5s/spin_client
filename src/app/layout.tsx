@@ -4,6 +4,7 @@ import "./globals.css";
 import { AuthProvider } from "@/context/AuthContext";
 import { WalletProvider } from "@/context/WalletContext";
 import { SystemSettingsProvider } from "@/context/SystemSettingsContext";
+import { SocketProvider } from "@/context/SocketContext";
 import { GoogleAuthProvider } from "@/providers/GoogleAuthProvider";
 import { Toaster } from "sonner";
 
@@ -37,8 +38,10 @@ export default function RootLayout({
           <AuthProvider>
             <SystemSettingsProvider>
               <WalletProvider>
-                {children}
-                <Toaster position="top-center" richColors />
+                <SocketProvider>
+                  {children}
+                  <Toaster position="top-center" richColors />
+                </SocketProvider>
               </WalletProvider>
             </SystemSettingsProvider>
           </AuthProvider>

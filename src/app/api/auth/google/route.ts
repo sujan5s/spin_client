@@ -40,15 +40,15 @@ export async function POST(request: Request) {
             // non-fatal
         }
 
-        // Create response with cookie
+        // Create response with token visible to client for WebSocket auth
         const response = NextResponse.json(
-            { user: data.user },
+            { user: data.user, token: data.token },
             { status: 200 }
         );
 
         if (data.token) {
             response.cookies.set("token", data.token, {
-                httpOnly: true,
+                httpOnly: false,
                 secure: process.env.NODE_ENV === "production",
                 sameSite: "strict",
                 maxAge: 60 * 60 * 24, // 24 hours

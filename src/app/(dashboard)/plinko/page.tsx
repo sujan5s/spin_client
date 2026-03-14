@@ -2,15 +2,17 @@
 
 import { useState } from "react";
 import { useWallet } from "@/context/WalletContext";
-import { Coins, Loader2, History } from "lucide-react";
+import { useSocket } from "@/context/SocketContext";
+import { Coins, History } from "lucide-react";
 import PlinkoCanvas from "@/components/plinko/PlinkoCanvas";
 import WinLossPopup from "@/components/plinko/WinLossPopup";
 import { cn } from "@/lib/utils";
 import { useSystemSettings } from "@/context/SystemSettingsContext";
 
 export default function PlinkoPage() {
-    const { balance, setBalance, setBonusBalance, refreshTransactions } = useWallet();
+    const { balance, refreshTransactions } = useWallet();
     const { gamesEnabled } = useSystemSettings();
+    const { socket, isConnected, pauseBalanceUpdates, resumeBalanceUpdates } = useSocket();
     const [betAmount, setBetAmount] = useState<string>("10");
     const [risk, setRisk] = useState<'low' | 'medium' | 'high'>('medium');
     const [rows, setRows] = useState<number>(16);
@@ -20,43 +22,24 @@ export default function PlinkoPage() {
     // Auto-bet feature
     // const [isAuto, setIsAuto] = useState(false);
 
-    const handleDrop = async () => {
+    const handleDrop = () => {
         const bet = parseFloat(betAmount);
         if (!bet || bet <= 0 || bet > balance) return;
+        if (!isConnected || !socket) return;
 
-        // Optimistic deduction? Or wait for API?
-        // Wait for API to ensure path is valid.
+        pauseBalanceUpdates();
 
-        try {
-            const res = await fetch("/api/game/plinko", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ betAmount: bet, rows, risk })
-            });
-            const data = await res.json();
+        socket.emit('plinko:play', { betAmount: bet, rows, risk }, (data: any) => {
+            if (data.error) { console.error(data.error); resumeBalanceUpdates(); return; }
 
-            if (!res.ok) throw new Error(data.error);
-
-            // Add ball to state
             const newBall = {
                 id: Math.random().toString(36).substr(2, 9),
                 path: data.path,
                 multiplier: data.multiplier,
-                betAmount: bet // Store bet for toast
+                betAmount: bet
             };
-
             setActiveBalls(prev => [...prev, newBall]);
-
-            setActiveBalls(prev => [...prev, newBall]);
-
-            // Deduction happens immediately for better UX
-            if (data.balance !== undefined) setBalance(data.balance);
-            if (data.bonusBalance !== undefined) setBonusBalance(data.bonusBalance);
-            refreshTransactions();
-
-        } catch (error) {
-            console.error(error);
-        }
+        });
     };
 
     const handleBallComplete = (id: string, multiplier: number, bet: number) => {
@@ -64,10 +47,9 @@ export default function PlinkoPage() {
         const win = bet * multiplier;
         const profit = win - bet;
 
-        // Update balance with Winnings (since bet was already deducted)
-        if (win > 0) {
-            refreshTransactions();
-        }
+        // Resume balance updates now that animation is done
+        resumeBalanceUpdates();
+        refreshTransactions();
 
         // Update Last Results
         setLastResults(prev => [{ id, multiplier, profit }, ...prev].slice(0, 10));

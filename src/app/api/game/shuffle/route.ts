@@ -91,7 +91,7 @@ export async function POST(request: Request) {
         //    So Network Inspector CAN see it.
         //    This is acceptable for this level of app.
 
-        const winningCup = Math.floor(Math.random() * 3); // 0, 1, 2
+        // Generate winning cup later at reveal to prevent network inspection cheating.
         const multiplier = 2.90; // Standard ~33% odds with house edge
 
         // Transaction
@@ -118,7 +118,7 @@ export async function POST(request: Request) {
                 data: {
                     userId,
                     betAmount,
-                    winningCup,
+                    winningCup: -1, // Placeholder until reveal
                     status: "active",
                     multiplier
                 }
@@ -129,7 +129,6 @@ export async function POST(request: Request) {
 
         return NextResponse.json({
             gameId: transactionResult.game.id,
-            winningCup,
             balance: transactionResult.balance,
             bonusBalance: transactionResult.bonusBalance
         });
@@ -180,7 +179,10 @@ export async function PUT(request: Request) {
         let winAmount = 0;
         let status = "lost";
 
-        if (game.winningCup === selectedCup) {
+        // Generate actual outcome now
+        const actualWinningCup = Math.floor(Math.random() * 3);
+
+        if (actualWinningCup === selectedCup) {
             status = "won";
             winAmount = game.betAmount * game.multiplier;
         }
@@ -189,7 +191,7 @@ export async function PUT(request: Request) {
             // Update Game
             await tx.shuffleGame.update({
                 where: { id: gameId },
-                data: { status, selectedCup, payout: winAmount }
+                data: { status, selectedCup, winningCup: actualWinningCup, payout: winAmount }
             });
 
             // Update User
@@ -220,6 +222,7 @@ export async function PUT(request: Request) {
         return NextResponse.json({
             status,
             winAmount,
+            winningCup: actualWinningCup,
             balance: transactionResult
         });
 
