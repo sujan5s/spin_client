@@ -87,10 +87,13 @@ function SignupForm() {
 
     const handleGoogleLogin = useGoogleLogin({
         onSuccess: async (tokenResponse) => {
+            setIsLoading(true);
             try {
                 await googleLogin(tokenResponse.access_token, referralCode);
             } catch (error) {
                 alert("Google Login Failed");
+            } finally {
+                setIsLoading(false);
             }
         },
         onError: () => alert("Google Login Failed"),
@@ -120,7 +123,8 @@ function SignupForm() {
                                 type="text"
                                 value={name}
                                 onChange={(e) => setName(e.target.value)}
-                                className="w-full px-4 py-3 bg-secondary/50 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-accent text-foreground placeholder-muted-foreground transition-all"
+                                disabled={isLoading}
+                                className="w-full px-4 py-3 bg-secondary/50 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-accent text-foreground placeholder-muted-foreground transition-all disabled:opacity-50"
                                 placeholder="ProGamer123"
                                 required
                             />
@@ -133,7 +137,8 @@ function SignupForm() {
                                 type="email"
                                 value={email}
                                 onChange={(e) => setEmail(e.target.value)}
-                                className="w-full px-4 py-3 bg-secondary/50 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-accent text-foreground placeholder-muted-foreground transition-all"
+                                disabled={isLoading}
+                                className="w-full px-4 py-3 bg-secondary/50 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-accent text-foreground placeholder-muted-foreground transition-all disabled:opacity-50"
                                 placeholder="player@gameverse.com"
                                 required
                             />
@@ -146,7 +151,8 @@ function SignupForm() {
                                 type="password"
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
-                                className="w-full px-4 py-3 bg-secondary/50 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-accent text-foreground placeholder-muted-foreground transition-all"
+                                disabled={isLoading}
+                                className="w-full px-4 py-3 bg-secondary/50 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-accent text-foreground placeholder-muted-foreground transition-all disabled:opacity-50"
                                 placeholder="••••••••"
                                 required
                             />
@@ -159,7 +165,8 @@ function SignupForm() {
                                 type="text"
                                 value={referralCode}
                                 onChange={(e) => setReferralCode(e.target.value)}
-                                className="w-full px-4 py-3 bg-secondary/50 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-accent text-foreground placeholder-muted-foreground transition-all"
+                                disabled={isLoading}
+                                className="w-full px-4 py-3 bg-secondary/50 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-accent text-foreground placeholder-muted-foreground transition-all disabled:opacity-50"
                                 placeholder="Enter referral code"
                             />
                         </div>
@@ -169,7 +176,16 @@ function SignupForm() {
                             disabled={isLoading}
                             className="w-full py-3 bg-accent hover:bg-accent/90 text-accent-foreground font-bold rounded-lg transition-all transform hover:scale-[1.02] flex items-center justify-center disabled:opacity-50"
                         >
-                            {isLoading ? "Sending OTP..." : "Continue with Email"} <ArrowRight className="ml-2 h-5 w-5" />
+                            {isLoading ? (
+                                <span className="flex items-center">
+                                    <span className="animate-spin h-5 w-5 mr-3 border-2 border-accent-foreground border-t-transparent rounded-full" />
+                                    Sending OTP...
+                                </span>
+                            ) : (
+                                <>
+                                    Continue with Email <ArrowRight className="ml-2 h-5 w-5" />
+                                </>
+                            )}
                         </button>
 
                         <div className="relative my-6">
@@ -184,7 +200,8 @@ function SignupForm() {
                         <button
                             type="button"
                             onClick={() => handleGoogleLogin()}
-                            className="w-full py-3 bg-white text-black font-bold rounded-lg transition-all transform hover:scale-[1.02] flex items-center justify-center"
+                            disabled={isLoading}
+                            className="w-full py-3 bg-white text-black font-bold rounded-lg transition-all transform hover:scale-[1.02] flex items-center justify-center disabled:opacity-50"
                         >
                             <svg className="h-5 w-5 mr-2" viewBox="0 0 24 24">
                                 <path
@@ -222,7 +239,8 @@ function SignupForm() {
                                 type="text"
                                 value={otp}
                                 onChange={(e) => setOtp(e.target.value)}
-                                className="w-full px-4 py-3 bg-secondary/50 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-accent text-foreground placeholder-muted-foreground transition-all text-center tracking-widest text-2xl"
+                                disabled={isLoading}
+                                className="w-full px-4 py-3 bg-secondary/50 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-accent text-foreground placeholder-muted-foreground transition-all text-center tracking-widest text-2xl disabled:opacity-50"
                                 placeholder="000000"
                                 maxLength={6}
                                 required
@@ -234,13 +252,19 @@ function SignupForm() {
                             disabled={isLoading}
                             className="w-full py-3 bg-accent hover:bg-accent/90 text-accent-foreground font-bold rounded-lg transition-all transform hover:scale-[1.02] flex items-center justify-center disabled:opacity-50"
                         >
-                            {isLoading ? "Verifying..." : "Verify & Create Account"}
+                            {isLoading ? (
+                                <span className="flex items-center">
+                                    <span className="animate-spin h-5 w-5 mr-3 border-2 border-accent-foreground border-t-transparent rounded-full" />
+                                    Verifying...
+                                </span>
+                            ) : "Verify & Create Account"}
                         </button>
 
                         <button
                             type="button"
                             onClick={() => setStep("details")}
-                            className="w-full text-sm text-muted-foreground hover:text-foreground"
+                            disabled={isLoading}
+                            className="w-full text-sm text-muted-foreground hover:text-foreground disabled:opacity-50"
                         >
                             Back to details
                         </button>

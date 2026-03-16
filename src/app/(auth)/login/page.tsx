@@ -9,14 +9,18 @@ import { useGoogleLogin } from "@react-oauth/google";
 export default function LoginPage() {
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
+    const [isLoading, setIsLoading] = useState(false);
     const { login, googleLogin } = useAuth();
 
     const handleGoogleLogin = useGoogleLogin({
         onSuccess: async (tokenResponse) => {
+            setIsLoading(true);
             try {
                 await googleLogin(tokenResponse.access_token);
             } catch (error) {
                 alert("Google Login Failed");
+            } finally {
+                setIsLoading(false);
             }
         },
         onError: () => alert("Google Login Failed"),
@@ -24,10 +28,13 @@ export default function LoginPage() {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        setIsLoading(true);
         try {
             await login(email, password);
         } catch (error) {
             alert("Login failed");
+        } finally {
+            setIsLoading(false);
         }
     };
 
@@ -54,7 +61,8 @@ export default function LoginPage() {
                             type="email"
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
-                            className="w-full px-4 py-3 bg-secondary/50 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground placeholder-muted-foreground transition-all"
+                            disabled={isLoading}
+                            className="w-full px-4 py-3 bg-secondary/50 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground placeholder-muted-foreground transition-all disabled:opacity-50"
                             placeholder="player@gameverse.com"
                             required
                         />
@@ -67,7 +75,8 @@ export default function LoginPage() {
                             type="password"
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
-                            className="w-full px-4 py-3 bg-secondary/50 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground placeholder-muted-foreground transition-all"
+                            disabled={isLoading}
+                            className="w-full px-4 py-3 bg-secondary/50 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground placeholder-muted-foreground transition-all disabled:opacity-50"
                             placeholder="••••••••"
                             required
                         />
@@ -75,9 +84,19 @@ export default function LoginPage() {
 
                     <button
                         type="submit"
-                        className="w-full py-3 bg-primary hover:bg-primary/90 text-primary-foreground font-bold rounded-lg transition-all transform hover:scale-[1.02] flex items-center justify-center"
+                        disabled={isLoading}
+                        className="w-full py-3 bg-primary hover:bg-primary/90 text-primary-foreground font-bold rounded-lg transition-all transform hover:scale-[1.02] flex items-center justify-center disabled:opacity-50"
                     >
-                        Login <ArrowRight className="ml-2 h-5 w-5" />
+                        {isLoading ? (
+                            <span className="flex items-center">
+                                <span className="animate-spin h-5 w-5 mr-3 border-2 border-primary-foreground border-t-transparent rounded-full" />
+                                Logging in...
+                            </span>
+                        ) : (
+                            <>
+                                Login <ArrowRight className="ml-2 h-5 w-5" />
+                            </>
+                        )}
                     </button>
 
                     <div className="relative my-6">
